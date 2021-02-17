@@ -165,7 +165,7 @@ class ModelNet40(Dataset):
             if self.partition == 'train':
                 pointcloud,_ = jitter_pointcloud(pointcloud)
                 # np.random.shuffle(pointcloud)
-            return pointcloud, label, pointcloud, label # the latter two are not used
+            return pointcloud.astype('float32'), label, pointcloud.astype('float32'), label # the latter two are not used
         else:
             if self.partition == 'train':
                 pointcloud,_ = jitter_pointcloud(pointcloud)
@@ -174,7 +174,7 @@ class ModelNet40(Dataset):
             #rotation_label = np.squeeze(rotation_label)
             rotated_pointcloud = rotate_data(pointcloud, rotation_label)
 
-            return pointcloud,label,rotated_pointcloud,rotation_label
+            return pointcloud.astype('float32'),label,rotated_pointcloud.astype('float32'),rotation_label
 
 
     def __len__(self):
@@ -248,7 +248,7 @@ class ModelNet40_SSL(Dataset):
             jigsaw_pointcloud, jigsaw_label = generate_jigsaw_data_label(pointcloud,self.k)
             #rotation_label = np.squeeze(rotation_label)
 
-            return jigsaw_pointcloud,jigsaw_label
+            return jigsaw_pointcloud.astype('float32'),jigsaw_label
         elif self.rotation:
 
             if self.partition == 'train':
@@ -258,7 +258,7 @@ class ModelNet40_SSL(Dataset):
             #rotation_label = np.squeeze(rotation_label)
             rotated_pointcloud = rotate_data(pointcloud, rotation_label)
 
-            return rotated_pointcloud,rotation_label
+            return rotated_pointcloud.astype('float32'),rotation_label
 
 
     def __len__(self):
@@ -280,7 +280,7 @@ class ModelNet40_Jigsaw(Dataset):
             if self.partition == 'train':
                 pointcloud,_ = jitter_pointcloud(pointcloud)
                 # np.random.shuffle(pointcloud)
-            return pointcloud, label, pointcloud, label # the latter two are not used 
+            return pointcloud.astype('float32'), label, pointcloud.astype('float32'), label # the latter two are not used 
         else:
             if self.partition == 'train':
                 pointcloud,_ = jitter_pointcloud(pointcloud)
@@ -288,7 +288,7 @@ class ModelNet40_Jigsaw(Dataset):
             jigsaw_pointcloud, jigsaw_label = generate_jigsaw_data_label(pointcloud,self.k)
             #rotation_label = np.squeeze(rotation_label)
 
-            return pointcloud,label,jigsaw_pointcloud,jigsaw_label
+            return pointcloud.astype('float32'),label,jigsaw_pointcloud.astype('float32'),jigsaw_label
 
 
     def __len__(self):
