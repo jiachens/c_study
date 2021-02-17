@@ -1,0 +1,6 @@
+*.log
+*checkpoints/
+*.npy
+*.png
+plot*
+data
