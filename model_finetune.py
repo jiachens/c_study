@@ -560,6 +560,117 @@ class DGCNN_Rotation(nn.Module):
         return x, None, None
 
 
+class DGCNN_Jigsaw(nn.Module):
+    def __init__(self, args):
+        super(DGCNN_Jigsaw, self).__init__()
+        self.args = args
+        self.k = args.k
+        self.k1 = args.k1**3
+        # self.FSPool_local=args.fspool_local
+        # self.FSPool_global = args.fspool_global
+        # self.MLPPool_global = args.mlppool_global
+        self.bn1 = nn.BatchNorm2d(64)
+        self.bn2 = nn.BatchNorm2d(64)
+        self.bn3 = nn.BatchNorm2d(128)
+        self.bn4 = nn.BatchNorm2d(256)
+        self.bn5 = nn.BatchNorm1d(args.emb_dims)
+        
+        self.conv1 = nn.Sequential(nn.Conv2d(6, 64, kernel_size=1, bias=False),
+                                   self.bn1,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.conv2 = nn.Sequential(nn.Conv2d(64*2, 64, kernel_size=1, bias=False),
+                                   self.bn2,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.conv3 = nn.Sequential(nn.Conv2d(64*2, 128, kernel_size=1, bias=False),
+                                   self.bn3,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.conv4 = nn.Sequential(nn.Conv2d(128*2, 256, kernel_size=1, bias=False),
+                                   self.bn4,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.conv5 = nn.Sequential(nn.Conv1d(512, args.emb_dims, kernel_size=1, bias=False),
+                                   self.bn5,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        # self.linear1 = nn.Linear(args.emb_dims*2, 512, bias=False)
+        # self.bn6 = nn.BatchNorm1d(512)
+        # self.dp1 = nn.Dropout(p=args.dropout)
+        # self.linear2 = nn.Linear(512, 256)
+        # self.bn7 = nn.BatchNorm1d(256)
+        # self.dp2 = nn.Dropout(p=args.dropout)
+        # self.linear3 = nn.Linear(256, args.angles)
+        self.conv6 = nn.Conv1d(64 + args.emb_dims * 2, 512, 1, bias=False)
+        self.conv7 = nn.Conv1d(512, 256, 1, bias=False)
+        self.conv8 = nn.Conv1d(256, 128, 1, bias=False)
+        self.conv9 = nn.Conv1d(128, self.k1, 1, bias=False)
+        self.bn6 = nn.BatchNorm1d(512)
+        self.bn7 = nn.BatchNorm1d(256)
+        self.bn8 = nn.BatchNorm1d(128)
+
+        self.pool1 = MAXPOOL()
+        self.pool2 = MAXPOOL()
+        self.pool3 = MAXPOOL()
+        self.pool4 = MAXPOOL()
+        # if(self.FSPool_global):
+        #     self.pool5 = FSPOOL(1024,1024)
+        #     self.pool6 = FSPOOL(1024,1024)
+        # elif(self.MLPPool_global):
+        # self.pool5 = MLPPool(1024,2,1024)
+    
+    def forward(self, x):
+        batch_size = x.size(0)
+        x = get_graph_feature(x, k=self.k)
+        x = self.conv1(x)
+        x1 = self.pool1(x)
+
+        x = get_graph_feature(x1, k=self.k)
+        x = self.conv2(x)
+        x2 = self.pool2(x)
+
+        pointfeat = x2
+
+        x = get_graph_feature(x2, k=self.k)
+        x = self.conv3(x)
+        x3 = self.pool3(x)
+
+        x = get_graph_feature(x3, k=self.k)
+        x = self.conv4(x)
+        x4 = self.pool4(x)
+
+        x = torch.cat((x1, x2, x3, x4), dim=1)
+
+        x = self.conv5(x)
+
+        # if(self.FSPool_global):
+        #     x = x.unsqueeze(2)
+        #     x1 = self.pool5(x).view(batch_size,-1)
+        #     x2 = self.pool6(x).view(batch_size,-1)
+        #     x = torch.cat((x1, x2), 1)
+        # elif(self.MLPPool_global):
+        #     x = self.pool5(x)
+        # else:
+        x1 = F.adaptive_max_pool1d(x, 1).view(batch_size, -1)
+        x2 = F.adaptive_avg_pool1d(x, 1).view(batch_size, -1)
+        x = torch.cat((x1, x2), 1)
+
+        x = x.view(-1, self.args.emb_dims * 2, 1).repeat(1, 1, self.args.num_points)
+        x = torch.cat([x, pointfeat], 1)
+        
+        x = F.relu(self.bn6(self.conv6(x)))
+        x = F.relu(self.bn7(self.conv7(x)))
+        x = F.relu(self.bn8(self.conv8(x)))
+        x = self.conv9(x)
+        x = x.transpose(2,1).contiguous()
+        x = F.log_softmax(x.view(-1,self.k1), dim=-1)
+        x = x.view(batch_size, self.args.num_points, self.k1)
+        # if not rotation:
+
+        # else:
+        #     x = F.leaky_relu(self.bn8(self.linear4(x)), negative_slope=0.2)
+        #     x = self.dp3(x)
+        #     x = F.leaky_relu(self.bn9(self.linear5(x)), negative_slope=0.2)
+        #     x = self.dp4(x)
+        #     x = self.linear6(x)
+        return x, None, None
+
     def get_partials(self,x,labels): 
         batch_size = x.size(0)
 

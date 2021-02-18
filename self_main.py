@@ -16,7 +16,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import CosineAnnealingLR, ExponentialLR, StepLR, MultiStepLR
 from data import ModelNet40_SSL
-from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw
+from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, DGCNN_Jigsaw
 import numpy as np
 from torch.utils.data import DataLoader
 import sys
@@ -32,17 +32,17 @@ TRAIN_ITER=7
 TEST_ITER=7
 
 def _init_():
-    if not os.path.exists('ssl_checkpoints'):
-        os.makedirs('ssl_checkpoints')
-    if not os.path.exists('ssl_checkpoints/'+args.exp_name):
-        os.makedirs('ssl_checkpoints/'+args.exp_name)
-    if not os.path.exists('ssl_checkpoints/'+args.exp_name+'/'+'models'):
-        os.makedirs('ssl_checkpoints/'+args.exp_name+'/'+'models')
-    os.system('cp self_main.py ssl_checkpoints'+'/'+args.exp_name+'/'+'self_main.py.backup')
-    os.system('cp model_finetune.py ssl_checkpoints' + '/' + args.exp_name + '/' + 'model_finetune.py.backup')
-    os.system('cp util.py ssl_checkpoints' + '/' + args.exp_name + '/' + 'util.py.backup')
-    os.system('cp data.py ssl_checkpoints' + '/' + args.exp_name + '/' + 'data.py.backup')
-    os.system('cp attack.py ssl_checkpoints' + '/' + args.exp_name + '/' + 'attack.py.backup')
+    if not os.path.exists(args.pre_path + 'ssl_checkpoints'):
+        os.makedirs(args.pre_path + 'ssl_checkpoints')
+    if not os.path.exists(args.pre_path + 'ssl_checkpoints/'+args.exp_name):
+        os.makedirs(args.pre_path + 'ssl_checkpoints/'+args.exp_name)
+    if not os.path.exists(args.pre_path + 'ssl_checkpoints/'+args.exp_name+'/'+'models'):
+        os.makedirs(args.pre_path + 'ssl_checkpoints/'+args.exp_name+'/'+'models')
+    os.system('cp self_main.py ' + args.pre_path + 'ssl_checkpoints'+'/'+args.exp_name+'/'+'self_main.py.backup')
+    os.system('cp model_finetune.py ' + args.pre_path + 'ssl_checkpoints' + '/' + args.exp_name + '/' + 'model_finetune.py.backup')
+    os.system('cp util.py '+ args.pre_path +'ssl_checkpoints' + '/' + args.exp_name + '/' + 'util.py.backup')
+    os.system('cp data.py '+ args.pre_path +'ssl_checkpoints' + '/' + args.exp_name + '/' + 'data.py.backup')
+    os.system('cp attack.py '+ args.pre_path +'ssl_checkpoints' + '/' + args.exp_name + '/' + 'attack.py.backup')
 
 
 def set_bn_eval(m):
@@ -66,7 +66,9 @@ def train(args, io):
     elif args.model == 'dgcnn_rotation':
         model = DGCNN_Rotation(args).to(device)
     elif args.model == 'pointnet_jigsaw':
-        model = PointNet_Jigsaw(args).to(device)
+        model = DGCNN_Jigsaw(args).to(device)
+    elif args.model == 'dgcnn_jigsaw':
+        model = DGCNN_Jigsaw(args).to(device)
     else:
         raise Exception("Not implemented")
 
@@ -200,7 +202,7 @@ def train(args, io):
             # adversarial(args,io,model=model, dataloader = test_loader)
             # io.cprint(outstr)
 
-            torch.save(model.state_dict(), 'ssl_checkpoints/%s/models/model_epoch%d.t7' % (args.exp_name,epoch))
+            torch.save(model.state_dict(), args.pre_path + 'ssl_checkpoints/%s/models/model_epoch%d.t7' % (args.exp_name,epoch))
     return model
 
 def test(args, io,model=None, dataloader=None):
@@ -221,6 +223,8 @@ def test(args, io,model=None, dataloader=None):
             model = DGCNN_Rotation(args).to(device)
         elif args.model == 'pointnet_jigsaw':
             model = PointNet_Jigsaw(args).to(device)
+        elif args.model == 'dgcnn_jigsaw':
+            model = DGCNN_Jigsaw(args).to(device)
         else:
             raise Exception("Not implemented")
         model = nn.DataParallel(model)
@@ -269,6 +273,8 @@ def adversarial(args,io,model=None, dataloader=None):
             model = DGCNN_Rotation(args).to(device)
         elif args.model == 'pointnet_jigsaw':
             model = PointNet_Jigsaw(args).to(device)
+        elif args.model == 'dgcnn_jigsaw':
+            model = DGCNN_Jigsaw(args).to(device)
         else:
             raise Exception("Not implemented")
         model = nn.DataParallel(model)
@@ -299,10 +305,12 @@ def adversarial(args,io,model=None, dataloader=None):
 if __name__ == "__main__":
     # Training settings
     parser = argparse.ArgumentParser(description='Point Cloud Recognition')
+    parser.add_argument('--pre_path', type=str, default='./', metavar='N',
+                        help='Name of the experiment')
     parser.add_argument('--exp_name', type=str, default='exp', metavar='N',
                         help='Name of the experiment')
     parser.add_argument('--model', type=str, default='dgcnn', metavar='N',
-                        choices=['pointnet_rotation', 'dgcnn_rotation', 'pointnet_jigsaw'],
+                        choices=['pointnet_rotation', 'dgcnn_rotation', 'pointnet_jigsaw', 'dgcnn_jigsaw'],
                         help='Model to use, [pointnet, dgcnn]')
     parser.add_argument('--dataset', type=str, default='modelnet40', metavar='N',
                         choices=['modelnet40'])
@@ -361,7 +369,7 @@ if __name__ == "__main__":
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     _init_()
     print(args.adversarial)
-    io = IOStream('ssl_checkpoints/' + args.exp_name + '/run.log')
+    io = IOStream(args.pre_path + 'ssl_checkpoints/' + args.exp_name + '/run.log')
     io.cprint(str(args))
 
     args.cuda = not args.no_cuda and torch.cuda.is_available()
