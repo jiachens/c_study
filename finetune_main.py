@@ -32,17 +32,17 @@ TRAIN_ITER=7
 TEST_ITER=7
 
 def _init_():
-    if not os.path.exists('finetune_checkpoints'):
-        os.makedirs('finetune_checkpoints')
-    if not os.path.exists('finetune_checkpoints/'+args.exp_name):
-        os.makedirs('finetune_checkpoints/'+args.exp_name)
-    if not os.path.exists('finetune_checkpoints/'+args.exp_name+'/'+'models'):
-        os.makedirs('finetune_checkpoints/'+args.exp_name+'/'+'models')
-    os.system('cp finetune_main.py finetune_checkpoints'+'/'+args.exp_name+'/'+'finetune_main.py.backup')
-    os.system('cp model_finetune.py finetune_checkpoints' + '/' + args.exp_name + '/' + 'model_finetune.py.backup')
-    os.system('cp util.py finetune_checkpoints' + '/' + args.exp_name + '/' + 'util.py.backup')
-    os.system('cp data.py finetune_checkpoints' + '/' + args.exp_name + '/' + 'data.py.backup')
-    os.system('cp attack.py finetune_checkpoints' + '/' + args.exp_name + '/' + 'attack.py.backup')
+    if not os.path.exists(args.pre_path +'finetune_checkpoints'):
+        os.makedirs(args.pre_path +'finetune_checkpoints')
+    if not os.path.exists(args.pre_path +'finetune_checkpoints/'+args.exp_name):
+        os.makedirs(args.pre_path +'finetune_checkpoints/'+args.exp_name)
+    if not os.path.exists(args.pre_path +'finetune_checkpoints/'+args.exp_name+'/'+'models'):
+        os.makedirs(args.pre_path +'finetune_checkpoints/'+args.exp_name+'/'+'models')
+    os.system('cp finetune_main.py '+args.pre_path+'finetune_checkpoints'+'/'+args.exp_name+'/'+'finetune_main.py.backup')
+    os.system('cp model_finetune.py '+args.pre_path+'finetune_checkpoints' + '/' + args.exp_name + '/' + 'model_finetune.py.backup')
+    os.system('cp util.py '+args.pre_path+'finetune_checkpoints' + '/' + args.exp_name + '/' + 'util.py.backup')
+    os.system('cp data.py '+args.pre_path+'finetune_checkpoints' + '/' + args.exp_name + '/' + 'data.py.backup')
+    os.system('cp attack.py '+args.pre_path+'finetune_checkpoints' + '/' + args.exp_name + '/' + 'attack.py.backup')
 
 
 def set_bn_eval(m):
@@ -148,7 +148,7 @@ def train(args, io):
             adversarial(args,io,model=model, dataloader = test_loader)
             # io.cprint(outstr)
 
-            torch.save(model.state_dict(), 'finetune_checkpoints/%s/models/model_epoch%d.t7' % (args.exp_name,epoch))
+            torch.save(model.state_dict(), args.pre_path+'finetune_checkpoints/%s/models/model_epoch%d.t7' % (args.exp_name,epoch))
     return model
 
 def test(args, io,model=None, dataloader=None):
@@ -252,6 +252,8 @@ if __name__ == "__main__":
     parser.add_argument('--model', type=str, default='dgcnn', metavar='N',
                         choices=['pointnet', 'dgcnn'],
                         help='Model to use, [pointnet, dgcnn]')
+    parser.add_argument('--pre_path', type=str, default='./', metavar='N',
+                        help='Name of the experiment')
     parser.add_argument('--dataset', type=str, default='modelnet40', metavar='N',
                         choices=['modelnet40'])
     parser.add_argument('--batch_size', type=int, default=32, metavar='batch_size',
@@ -305,7 +307,7 @@ if __name__ == "__main__":
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     _init_()
     print(args.adversarial)
-    io = IOStream('finetune_checkpoints/' + args.exp_name + '/run.log')
+    io = IOStream(args.pre_path+'finetune_checkpoints/' + args.exp_name + '/run.log')
     io.cprint(str(args))
 
     args.cuda = not args.no_cuda and torch.cuda.is_available()
