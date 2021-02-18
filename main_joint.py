@@ -137,7 +137,7 @@ def train(args, io):
             if args.rotation:
                 rotated_data, rotation_label = aug_data.to(device).float(), aug_label.to(device).squeeze()
                 if args.adversarial:
-                    data = attack.pgd_attack(model,data,label,eps=EPS,alpha=ALPHA,iters=TRAIN_ITER,mixup=False) 
+                    data = attack.pgd_attack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.train_iter,mixup=False) 
                     model.train()
                 opt.zero_grad()
                 logits,trans,trans_feat = model(data,rotation = False)
@@ -229,8 +229,8 @@ def train(args, io):
 
         if epoch % 10 == 0 or epoch == 249:
             if epoch == 249:
-                TEST_ITER = 200
-                ALPHA = 0.005
+                args.test_iter = 200
+                args.alpha = 0.005
             adversarial(args,io,model=model, dataloader = test_loader)
             # io.cprint(outstr)
 
@@ -337,7 +337,7 @@ def adversarial(args,io,model=None, dataloader=None):
         data, label = data.to(device).float(), label.to(device).squeeze()
         data = data.permute(0, 2, 1)
         batch_size = data.size()[0]
-        adv_data = attack.pgd_attack(model,data,label,eps=EPS,alpha=ALPHA,iters=TEST_ITER,repeat=1,mixup=False)
+        adv_data = attack.pgd_attack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,repeat=1,mixup=False)
         logits,trans,trans_feat = model(adv_data)
         preds = logits.max(dim=1)[1]
         test_true.append(label.cpu().numpy())
@@ -431,10 +431,10 @@ if __name__ == "__main__":
     else:
         io.cprint('Using CPU')
     model = None
-    EPS=args.eps
-    ALPHA=args.alpha
-    TRAIN_ITER=args.train_iter
-    TEST_ITER=args.test_iter
+    # EPS=args.eps
+    # ALPHA=args.alpha
+    # TRAIN_ITER=args.train_iter
+    # TEST_ITER=args.test_iter
     if not args.eval:
         start = time.time()
         model=train(args,io)
