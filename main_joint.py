@@ -26,10 +26,6 @@ from util import cal_loss, IOStream, cross_entropy_with_probs,trades_loss
 import sklearn.metrics as metrics
 import attack
 import time
-EPS=0.05
-ALPHA=0.01
-TRAIN_ITER=7
-TEST_ITER=7
 
 def _init_():
     if not os.path.exists(args.pre_path +'joint_checkpoints'):
@@ -232,6 +228,9 @@ def train(args, io):
         test(args,io,model=model, dataloader = test_loader)
 
         if epoch % 10 == 0 or epoch == 249:
+            if epoch == 249:
+                TEST_ITER = 200
+                ALPHA = 0.005
             adversarial(args,io,model=model, dataloader = test_loader)
             # io.cprint(outstr)
 
@@ -432,19 +431,16 @@ if __name__ == "__main__":
     else:
         io.cprint('Using CPU')
     model = None
+    EPS=args.eps
+    ALPHA=args.alpha
+    TRAIN_ITER=args.train_iter
+    TEST_ITER=args.test_iter
     if not args.eval:
         start = time.time()
-        EPS=args.eps
-        ALPHA=args.alpha
-        TRAIN_ITER=args.train_iter
-        TEST_ITER=args.test_iter
         model=train(args,io)
         end = time.time()
         io.cprint("Training took %.6f hours" % ((end - start)/3600))
     else:
-        EPS=args.eps
-        ALPHA=args.alpha
-        TEST_ITER=args.test_iter
         adversarial(args,io,model=model)
     # start = time.time()
     # if args.model != 'set_transformer': 

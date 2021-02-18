@@ -26,10 +26,10 @@ from util import cal_loss, IOStream, cross_entropy_with_probs,trades_loss
 import sklearn.metrics as metrics
 import attack
 import time
-EPS=0.05
-ALPHA=0.01
-TRAIN_ITER=7
-TEST_ITER=7
+# EPS=0.05
+# ALPHA=0.01
+# TRAIN_ITER=7
+# TEST_ITER=7
 
 def _init_():
     if not os.path.exists(args.pre_path +'finetune_checkpoints'):
@@ -145,6 +145,10 @@ def train(args, io):
         test(args,io,model=model, dataloader = test_loader)
 
         if epoch % 10 == 0 or epoch == 249:
+            if epoch == 249:
+                TEST_ITER = 200
+                ALPHA = 0.005
+                
             adversarial(args,io,model=model, dataloader = test_loader)
             # io.cprint(outstr)
 
