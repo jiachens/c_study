@@ -69,11 +69,12 @@ def train(args, io):
     else:
         raise Exception("Not implemented")
 
-    saved_model = torch.load(args.p)
-    model_dict =  model.state_dict()
-    state_dict = {k[7:]:v for k,v in saved_model.items() if k[7:] in model_dict.keys()} # module.
-    model_dict.update(state_dict)
-    model.load_state_dict(model_dict)
+    if args.p != '':  
+        saved_model = torch.load(args.p)
+        model_dict =  model.state_dict()
+        state_dict = {k[7:]:v for k,v in saved_model.items() if k[7:] in model_dict.keys()} # module.
+        model_dict.update(state_dict)
+        model.load_state_dict(model_dict)
 
     print(str(model))
 
