@@ -75,6 +75,10 @@ def train(args, io):
         state_dict = {k[7:]:v for k,v in saved_model.items() if k[7:] in model_dict.keys()} # module.
         model_dict.update(state_dict)
         model.load_state_dict(model_dict)
+    else:
+        for name,m in model.named_modules():
+            if name == 'stn.fc3' or name == 'fstn.fc3':
+                nn.init.constant_(m.weight, 0.)
 
     print(str(model))
 
