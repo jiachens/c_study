@@ -185,7 +185,7 @@ class MAXPOOL(nn.Module):
 
 class PointNet_Simple(nn.Module):
     def __init__(self, args):
-        super(PointNet, self).__init__()
+        super(PointNet_Simple, self).__init__()
         self.args = args
         #self.stn = STN3d()
         #self.fstn = STNkd(k=64)
