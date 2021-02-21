@@ -18,6 +18,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR, ExponentialLR, StepLR, M
 from data import ModelNet40_SSL
 from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, DGCNN_Jigsaw
 import numpy as np
+np.random.seed(666)
 from torch.utils.data import DataLoader
 import sys
 sys.path.append("./emd/")

@@ -1,5 +1,7 @@
 import torch
 import numpy as np
+np.random.seed(666)
+torch.manual_seed(666)
 import torch.nn.functional as F
 from util import cross_entropy_with_probs, cal_loss
 

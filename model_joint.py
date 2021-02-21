@@ -3,7 +3,9 @@ import sys
 import copy
 import math
 import numpy as np
+np.random.seed(666)
 import torch
+torch.manual_seed(666)
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable

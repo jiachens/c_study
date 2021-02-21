@@ -10,6 +10,8 @@
 
 import numpy as np
 import torch
+np.random.seed(666)
+torch.manual_seed(666)
 import torch.nn as nn
 import torch.nn.functional as F
 from typing import List, Mapping, Optional

@@ -1,19 +1,11 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""
-@Author: Yue Wang
-@Contact: yuewangx@mit.edu
-@File: model.py
-@Time: 2018/10/13 6:35 PM
-"""
-
-
 import os
 import sys
 import copy
 import math
 import numpy as np
+np.random.seed(666)
 import torch
+torch.manual_seed(666)
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
