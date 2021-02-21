@@ -16,7 +16,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import CosineAnnealingLR, ExponentialLR, StepLR, MultiStepLR
 from data import ModelNet40_SSL, ModelNet40
-from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, PointNet, DGCNN
+from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, PointNet, DGCNN, PointNet_Simple
 import numpy as np
 from torch.utils.data import DataLoader
 import sys
@@ -65,6 +65,8 @@ def train(args, io):
         model = PointNet(args).to(device)
     elif args.model == 'dgcnn':
         model = DGCNN(args).to(device)
+    elif args.model == 'pointnet_simple':
+        model = PointNet_Simple(args).to(device)
             #saved_model.load_state_dict(torch.load(args.p))
     else:
         raise Exception("Not implemented")
@@ -176,6 +178,8 @@ def test(args, io,model=None, dataloader=None):
             model = PointNet(args).to(device)
         elif args.model == 'dgcnn':
             model = DGCNN(args).to(device)
+        elif args.model == 'pointnet_simple':
+            model = PointNet_Simple(args).to(device)
                 #saved_model.load_state_dict(torch.load(args.p))
         else:
             raise Exception("Not implemented")
@@ -225,6 +229,8 @@ def adversarial(args,io,model=None, dataloader=None):
             model = PointNet(args).to(device)
         elif args.model == 'dgcnn':
             model = DGCNN(args).to(device)
+        elif args.model == 'pointnet_simple':
+            model = PointNet_Simple(args).to(device)
                 #saved_model.load_state_dict(torch.load(args.p))
         else:
             raise Exception("Not implemented")
@@ -259,8 +265,8 @@ if __name__ == "__main__":
     parser.add_argument('--exp_name', type=str, default='exp', metavar='N',
                         help='Name of the experiment')
     parser.add_argument('--model', type=str, default='dgcnn', metavar='N',
-                        choices=['pointnet', 'dgcnn'],
-                        help='Model to use, [pointnet, dgcnn]')
+                        choices=['pointnet', 'dgcnn', 'pointnet_simple'],
+                        help='Model to use, [pointnet, dgcnn pointnet_simple]')
     parser.add_argument('--pre_path', type=str, default='./', metavar='N',
                         help='Name of the experiment')
     parser.add_argument('--dataset', type=str, default='modelnet40', metavar='N',
