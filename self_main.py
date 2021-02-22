@@ -16,7 +16,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import CosineAnnealingLR, ExponentialLR, StepLR, MultiStepLR
 from data import ModelNet40_SSL
-from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, DGCNN_Jigsaw
+from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, DGCNN_Jigsaw, DeepSym_Rotation, DeepSym_Jigsaw
 import numpy as np
 np.random.seed(666)
 from torch.utils.data import DataLoader
@@ -70,18 +70,13 @@ def train(args, io):
         model = DGCNN_Jigsaw(args).to(device)
     elif args.model == 'dgcnn_jigsaw':
         model = DGCNN_Jigsaw(args).to(device)
+    elif args.model == 'deepsym_jigsaw':
+        model = DeepSym_Jigsaw(args).to(device)
+    elif args.model == 'deepsym_rotation':
+        model = DeepSym_Rotation(args).to(device)
     else:
         raise Exception("Not implemented")
 
-    # for name,m in model.named_modules():
-    #     if name == 'stn.fc3' or name == 'fstn.fc3':
-    #         nn.init.constant_(m.weight, 0.)
-    #     # elif isinstance(m, (nn.Conv1d, nn.Linear)):
-    #     #     nn.init.xavier_uniform_(m.weight)
-    #     #     nn.init.constant_(m.bias, 0.)
-    #     elif isinstance(m, nn.BatchNorm1d):
-    #         nn.init.constant_(m.weight, 1.)
-    #         nn.init.constant_(m.bias, 0.)
 
     print(str(model))
 
@@ -226,6 +221,10 @@ def test(args, io,model=None, dataloader=None):
             model = PointNet_Jigsaw(args).to(device)
         elif args.model == 'dgcnn_jigsaw':
             model = DGCNN_Jigsaw(args).to(device)
+        elif args.model == 'deepsym_jigsaw':
+            model = DeepSym_Jigsaw(args).to(device)
+        elif args.model == 'deepsym_rotation':
+            model = DeepSym_Rotation(args).to(device)
         else:
             raise Exception("Not implemented")
         model = nn.DataParallel(model)
@@ -276,6 +275,10 @@ def adversarial(args,io,model=None, dataloader=None):
             model = PointNet_Jigsaw(args).to(device)
         elif args.model == 'dgcnn_jigsaw':
             model = DGCNN_Jigsaw(args).to(device)
+        elif args.model == 'deepsym_jigsaw':
+            model = DeepSym_Jigsaw(args).to(device)
+        elif args.model == 'deepsym_rotation':
+            model = DeepSym_Rotation(args).to(device)
         else:
             raise Exception("Not implemented")
         model = nn.DataParallel(model)
@@ -311,7 +314,7 @@ if __name__ == "__main__":
     parser.add_argument('--exp_name', type=str, default='exp', metavar='N',
                         help='Name of the experiment')
     parser.add_argument('--model', type=str, default='dgcnn', metavar='N',
-                        choices=['pointnet_rotation', 'dgcnn_rotation', 'pointnet_jigsaw', 'dgcnn_jigsaw'],
+                        choices=['pointnet_rotation', 'dgcnn_rotation', 'pointnet_jigsaw', 'dgcnn_jigsaw', 'deepsym_jigsaw', 'deepsym_rotation'],
                         help='Model to use, [pointnet, dgcnn]')
     parser.add_argument('--dataset', type=str, default='modelnet40', metavar='N',
                         choices=['modelnet40'])

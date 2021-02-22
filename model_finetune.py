@@ -12,6 +12,169 @@ from util import sample_and_group
 from torch.autograd import Variable
 from modules import ISAB, PMA, SAB
 
+class DeepSym(nn.Module):
+    def __init__(self, args, output_channels=40):
+        super(DeepSym, self).__init__()
+        self.args = args
+        self.stn = STN3d()
+        self.fstn = STNkd(k=64)
+        self.conv1 = nn.Conv1d(3, 64, kernel_size=1, bias=False)
+        self.conv2 = nn.Conv1d(64, 64, kernel_size=1, bias=False)
+        self.conv3 = nn.Conv1d(64, 64, kernel_size=1, bias=False)
+        self.conv4 = nn.Conv1d(64, 128, kernel_size=1, bias=False)
+        self.conv5 = nn.Conv1d(128, args.emb_dims, kernel_size=1, bias=False)
+        self.bn1 = nn.BatchNorm1d(64,eps=1e-03)
+        self.bn2 = nn.BatchNorm1d(64,eps=1e-03)
+        self.bn3 = nn.BatchNorm1d(64,eps=1e-03)
+        self.bn4 = nn.BatchNorm1d(128,eps=1e-03)
+        self.bn5 = nn.BatchNorm1d(args.emb_dims)
+
+        self.linear1 = nn.Linear(args.emb_dims, 512, bias=False)
+        self.bn6 = nn.BatchNorm1d(512,eps=1e-03)
+        self.dp1 = nn.Dropout(p=0.3)
+        self.linear2 = nn.Linear(512, 256, bias=False)
+        self.bn7 = nn.BatchNorm1d(256,eps=1e-03)
+        self.dp2 = nn.Dropout(p=0.3)
+        # self.linear3 = nn.Linear(256,output_channels)
+        self.pool = MLPPool(args.emb_dims,1,args.num_points)
+
+        self.linear100 = nn.Linear(256,output_channels)
+
+    def forward(self, x, rotation=False):
+        batch_size = x.size(0)
+        trans = self.stn(x)
+        x = x.transpose(2, 1)
+        x = torch.bmm(x, trans)
+        x = x.transpose(2, 1)
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = F.relu(self.bn2(self.conv2(x)))
+        trans_feat = self.fstn(x)
+        x = x.transpose(2,1)
+        x = torch.bmm(x, trans_feat)
+        x = x.transpose(2,1)
+        x = F.relu(self.bn3(self.conv3(x)))
+        x = F.relu(self.bn4(self.conv4(x)))
+        x = F.relu(self.bn5(self.conv5(x)))
+        x = self.pool(x).view(batch_size,-1)
+        x = F.relu(self.bn6(self.linear1(x)))
+        x = self.dp1(x)
+        x = F.relu(self.bn7(self.linear2(x)))
+        x = self.dp2(x)
+
+        x = self.linear100(x)
+        
+        return x, trans, trans_feat
+
+class DeepSym_Rotation(nn.Module):
+    def __init__(self, args, output_channels=40):
+        super(DeepSym_Rotation, self).__init__()
+        self.args = args
+        self.stn = STN3d()
+        self.fstn = STNkd(k=64)
+        self.conv1 = nn.Conv1d(3, 64, kernel_size=1, bias=False)
+        self.conv2 = nn.Conv1d(64, 64, kernel_size=1, bias=False)
+        self.conv3 = nn.Conv1d(64, 64, kernel_size=1, bias=False)
+        self.conv4 = nn.Conv1d(64, 128, kernel_size=1, bias=False)
+        self.conv5 = nn.Conv1d(128, args.emb_dims, kernel_size=1, bias=False)
+        self.bn1 = nn.BatchNorm1d(64,eps=1e-03)
+        self.bn2 = nn.BatchNorm1d(64,eps=1e-03)
+        self.bn3 = nn.BatchNorm1d(64,eps=1e-03)
+        self.bn4 = nn.BatchNorm1d(128,eps=1e-03)
+        self.bn5 = nn.BatchNorm1d(args.emb_dims)
+
+        self.linear1 = nn.Linear(args.emb_dims, 512, bias=False)
+        self.bn6 = nn.BatchNorm1d(512,eps=1e-03)
+        self.dp1 = nn.Dropout(p=0.3)
+        self.linear2 = nn.Linear(512, 256, bias=False)
+        self.bn7 = nn.BatchNorm1d(256,eps=1e-03)
+        self.dp2 = nn.Dropout(p=0.3)
+        # self.linear3 = nn.Linear(256,output_channels)
+        self.pool = MLPPool(args.emb_dims,1,args.num_points)
+
+        self.linear3 = nn.Linear(256,args.angles)
+
+    def forward(self, x, rotation=False):
+        batch_size = x.size(0)
+        trans = self.stn(x)
+        x = x.transpose(2, 1)
+        x = torch.bmm(x, trans)
+        x = x.transpose(2, 1)
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = F.relu(self.bn2(self.conv2(x)))
+        trans_feat = self.fstn(x)
+        x = x.transpose(2,1)
+        x = torch.bmm(x, trans_feat)
+        x = x.transpose(2,1)
+        x = F.relu(self.bn3(self.conv3(x)))
+        x = F.relu(self.bn4(self.conv4(x)))
+        x = F.relu(self.bn5(self.conv5(x)))
+        x = self.pool(x).view(batch_size,-1)
+        x = F.relu(self.bn6(self.linear1(x)))
+        x = self.dp1(x)
+        x = F.relu(self.bn7(self.linear2(x)))
+        x = self.dp2(x)
+
+        x = self.linear3(x)
+        
+        return x, trans, trans_feat
+
+class DeepSym_Jigsaw(nn.Module):
+    def __init__(self, args):
+        super(DeepSym_Jigsaw, self).__init__()
+        self.args = args
+        self.k = (args.k1)**3
+        self.stn = STN3d()
+        self.fstn = STNkd(k=64)
+        self.conv1 = nn.Conv1d(3, 64, kernel_size=1, bias=False)
+        self.conv2 = nn.Conv1d(64, 64, kernel_size=1, bias=False)
+        self.conv3 = nn.Conv1d(64, 64, kernel_size=1, bias=False)
+        self.conv4 = nn.Conv1d(64, 128, kernel_size=1, bias=False)
+        self.conv5 = nn.Conv1d(128, args.emb_dims, kernel_size=1, bias=False)
+        self.bn1 = nn.BatchNorm1d(64,eps=1e-03)
+        self.bn2 = nn.BatchNorm1d(64,eps=1e-03)
+        self.bn3 = nn.BatchNorm1d(64,eps=1e-03)
+        self.bn4 = nn.BatchNorm1d(128,eps=1e-03)
+        self.bn5 = nn.BatchNorm1d(args.emb_dims)
+
+        self.pool = MLPPool(args.emb_dims,1,args.num_points)
+
+        self.conv6 = nn.Conv1d(64 + args.emb_dims, 512, 1, bias=False)
+        self.conv7 = nn.Conv1d(512, 256, 1, bias=False)
+        self.conv8 = nn.Conv1d(256, 128, 1, bias=False)
+        self.conv9 = nn.Conv1d(128, self.k, 1, bias=False)
+        self.bn6 = nn.BatchNorm1d(512,eps=1e-03)
+        self.bn7 = nn.BatchNorm1d(256,eps=1e-03)
+        self.bn8 = nn.BatchNorm1d(128,eps=1e-03)
+
+    def forward(self, x):
+        batchsize = x.size()[0]
+        trans = self.stn(x)
+        x = x.transpose(2, 1)
+        x = torch.bmm(x, trans)
+        x = x.transpose(2, 1)
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = F.relu(self.bn2(self.conv2(x)))
+        trans_feat = self.fstn(x)
+        x = x.transpose(2,1)
+        x = torch.bmm(x, trans_feat)
+        x = x.transpose(2,1)
+        pointfeat = x
+        x = F.relu(self.bn3(self.conv3(x)))
+        x = F.relu(self.bn4(self.conv4(x)))
+        x = F.relu(self.bn5(self.conv5(x)))
+        x = self.pool(x).view(batch_size,-1)
+
+        x = x.view(-1, 1024, 1).repeat(1, 1, self.args.num_points)
+        x = torch.cat([x, pointfeat], 1)
+        x = F.relu(self.bn6(self.conv6(x)))
+        x = F.relu(self.bn7(self.conv7(x)))
+        x = F.relu(self.bn8(self.conv8(x)))
+        x = self.conv9(x)
+        x = x.transpose(2,1).contiguous()
+        x = F.log_softmax(x.view(-1,self.k), dim=-1)
+        x = x.view(batchsize, self.args.num_points, self.k)
+        
+        return x, trans, trans_feat
 
 class Local_op(nn.Module):
     def __init__(self, in_channels, out_channels):

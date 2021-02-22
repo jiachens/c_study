@@ -16,7 +16,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import CosineAnnealingLR, ExponentialLR, StepLR, MultiStepLR, ReduceLROnPlateau
 from data import ModelNet40_SSL, ModelNet40
-from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, PointNet, DGCNN, PointNet_Simple, Pct
+from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, PointNet, DGCNN, PointNet_Simple, Pct, DeepSym
 import numpy as np
 np.random.seed(666)
 from torch.utils.data import DataLoader
@@ -70,6 +70,8 @@ def train(args, io):
         model = PointNet_Simple(args).to(device)
     elif args.model == 'pct':
         model = Pct(args).to(device)
+    elif args.model == 'deepsym':
+        model = DeepSym(args).to(device)
             #saved_model.load_state_dict(torch.load(args.p))
     else:
         raise Exception("Not implemented")
@@ -191,6 +193,8 @@ def test(args, io,model=None, dataloader=None):
             model = PointNet_Simple(args).to(device)
         elif args.model == 'pct':
             model = Pct(args).to(device)
+        elif args.model == 'deepsym':
+            model = DeepSym(args).to(device)
                 #saved_model.load_state_dict(torch.load(args.p))
         else:
             raise Exception("Not implemented")
@@ -244,6 +248,8 @@ def adversarial(args,io,model=None, dataloader=None):
             model = PointNet_Simple(args).to(device)
         elif args.model == 'pct':
             model = Pct(args).to(device)
+        elif args.model == 'deepsym':
+            model = DeepSym(args).to(device)
         else:
             raise Exception("Not implemented")
         model = nn.DataParallel(model)
@@ -277,7 +283,7 @@ if __name__ == "__main__":
     parser.add_argument('--exp_name', type=str, default='exp', metavar='N',
                         help='Name of the experiment')
     parser.add_argument('--model', type=str, default='dgcnn', metavar='N',
-                        choices=['pointnet', 'dgcnn', 'pointnet_simple', 'pct'],
+                        choices=['pointnet', 'dgcnn', 'pointnet_simple', 'pct', 'deepsym'],
                         help='Model to use, [pointnet, dgcnn pointnet_simple]')
     parser.add_argument('--pre_path', type=str, default='./', metavar='N',
                         help='Name of the experiment')
