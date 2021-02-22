@@ -162,7 +162,7 @@ class DeepSym_Jigsaw(nn.Module):
         x = F.relu(self.bn3(self.conv3(x)))
         x = F.relu(self.bn4(self.conv4(x)))
         x = F.relu(self.bn5(self.conv5(x)))
-        x = self.pool(x).view(batch_size,-1)
+        x = self.pool(x).view(batchsize,-1)
 
         x = x.view(-1, 1024, 1).repeat(1, 1, self.args.num_points)
         x = torch.cat([x, pointfeat], 1)
