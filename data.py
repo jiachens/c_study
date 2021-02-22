@@ -5,6 +5,11 @@ import h5py
 import numpy as np
 np.random.seed(666)
 from torch.utils.data import Dataset
+import torch
+torch.manual_seed(666)
+torch.cuda.manual_seed_all(666)
+torch.backends.cudnn.deterministic=True
+torch.backends.cudnn.benchmark = False
 
 
 def download():

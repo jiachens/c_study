@@ -19,6 +19,9 @@ from data import ModelNet40_SSL, ModelNet40
 from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, PointNet, DGCNN, PointNet_Simple, Pct, DeepSym
 import numpy as np
 np.random.seed(666)
+torch.cuda.manual_seed_all(666)
+torch.backends.cudnn.deterministic=True
+torch.backends.cudnn.benchmark = False
 from torch.utils.data import DataLoader
 import sys
 sys.path.append("./emd/")
@@ -303,8 +306,8 @@ if __name__ == "__main__":
                         help='SGD momentum (default: 0.9)')
     parser.add_argument('--no_cuda', type=bool, default=False,
                         help='enables CUDA training')
-    parser.add_argument('--seed', type=int, default=1, metavar='S',
-                        help='random seed (default: 1)')
+    parser.add_argument('--seed', type=int, default=666, metavar='S',
+                        help='random seed (default: 666)')
     parser.add_argument('--eval', type=bool,  default=False,
                         help='evaluate the model')
     parser.add_argument('--num_points', type=int, default=1024,

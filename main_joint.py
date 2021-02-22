@@ -19,6 +19,9 @@ from data import ModelNet40_SSL, ModelNet40, ModelNet40_Jigsaw
 from model_joint import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, DGCNN_Jigsaw
 import numpy as np
 np.random.seed(666)
+torch.cuda.manual_seed_all(666)
+torch.backends.cudnn.deterministic=True
+torch.backends.cudnn.benchmark = False
 from torch.utils.data import DataLoader
 import sys
 sys.path.append("./emd/")
