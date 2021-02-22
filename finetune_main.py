@@ -19,6 +19,7 @@ from data import ModelNet40_SSL, ModelNet40
 from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, PointNet, DGCNN, PointNet_Simple, Pct, DeepSym
 import numpy as np
 np.random.seed(666)
+torch.set_deterministic(True)
 from torch.utils.data import DataLoader
 import sys
 sys.path.append("./emd/")
