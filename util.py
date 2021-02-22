@@ -10,7 +10,6 @@
 
 import numpy as np
 import torch
-torch.set_deterministic(True)
 np.random.seed(666)
 torch.manual_seed(666)
 import torch.nn as nn

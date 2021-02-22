@@ -6,7 +6,6 @@ import numpy as np
 np.random.seed(666)
 import torch
 torch.manual_seed(666)
-torch.set_deterministic(True)
 import torch.nn as nn
 import torch.nn.functional as F
 from util import sample_and_group 
