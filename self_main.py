@@ -67,7 +67,7 @@ def train(args, io):
     elif args.model == 'dgcnn_rotation':
         model = DGCNN_Rotation(args).to(device)
     elif args.model == 'pointnet_jigsaw':
-        model = DGCNN_Jigsaw(args).to(device)
+        model = PointNet_Jigsaw(args).to(device)
     elif args.model == 'dgcnn_jigsaw':
         model = DGCNN_Jigsaw(args).to(device)
     elif args.model == 'deepsym_jigsaw':
