@@ -17,6 +17,7 @@ import torch.nn.functional as F
 from typing import List, Mapping, Optional
 from torch.autograd import Variable
 import torch.optim as optim
+from pointnet2_ops import pointnet2_utils
 
 def feature_transform_regularizer(trans):
     d = trans.size()[1]
