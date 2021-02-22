@@ -94,7 +94,14 @@ def train(args, io):
         opt = optim.Adam(model.parameters(), lr=args.lr)
 
     
-    scheduler = StepLR(opt, 20, 0.7)
+    if args.scheduler == 'default':
+        scheduler = StepLR(opt, 20, 0.7)
+    elif args.scheduler == 'plateau':
+        scheduler = ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=5)
+    elif args.scheduler == 'cosine':
+        scheduler = CosineAnnealingLR(opt, args.epochs, eta_min=0.00001)
+    elif args.scheduler == 'piecewise':
+        scheduler = MultiStepLR(opt, milestones=[100,150,200], gamma=0.1)
 
     criterion = cal_loss
 
@@ -319,6 +326,8 @@ if __name__ == "__main__":
                         help="Whether to use jigsaw")
     parser.add_argument('--model_path', type=str, default='', metavar='N',
                         help='Pretrained model path')
+    parser.add_argument('--scheduer',type=str,default='default',
+                        help="Which lr scheduer to use")
     args = parser.parse_args()
 
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu

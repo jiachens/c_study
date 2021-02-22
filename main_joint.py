@@ -14,7 +14,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.optim.lr_scheduler import CosineAnnealingLR, ExponentialLR, StepLR, MultiStepLR
+from torch.optim.lr_scheduler import CosineAnnealingLR, ExponentialLR, StepLR, MultiStepLR, ReduceLROnPlateau
 from data import ModelNet40_SSL, ModelNet40, ModelNet40_Jigsaw
 from model_joint import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, DGCNN_Jigsaw
 import numpy as np
@@ -98,8 +98,14 @@ def train(args, io):
         print("Use Adam")
         opt = optim.Adam(model.parameters(), lr=args.lr)
 
-    
-    scheduler = StepLR(opt, 20, 0.7)
+    if args.scheduler == 'default':
+        scheduler = StepLR(opt, 20, 0.7)
+    elif args.scheduler == 'plateau':
+        scheduler = ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=5)
+    elif args.scheduler == 'cosine':
+        scheduler = CosineAnnealingLR(opt, args.epochs, eta_min=0.00001)
+    elif args.scheduler == 'piecewise':
+        scheduler = MultiStepLR(opt, milestones=[100,150,200], gamma=0.1)
 
     criterion = cal_loss
 
@@ -403,6 +409,8 @@ if __name__ == "__main__":
                         help="Whether to use adversarial examples")
     parser.add_argument('--gpu',type=str,default='0',
                         help="Which gpu to use")
+    parser.add_argument('--scheduer',type=str,default='default',
+                        help="Which lr scheduer to use")
     parser.add_argument('--rotation',type=bool,default=False,
                         help="Whether to use rotation")
     parser.add_argument('--jigsaw',type=bool,default=False,
