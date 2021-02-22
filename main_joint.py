@@ -409,8 +409,8 @@ if __name__ == "__main__":
                         help="Whether to use adversarial examples")
     parser.add_argument('--gpu',type=str,default='0',
                         help="Which gpu to use")
-    parser.add_argument('--scheduer',type=str,default='default',
-                        help="Which lr scheduer to use")
+    parser.add_argument('--scheduler',type=str,default='default',
+                        help="Which lr scheduler to use")
     parser.add_argument('--rotation',type=bool,default=False,
                         help="Whether to use rotation")
     parser.add_argument('--jigsaw',type=bool,default=False,

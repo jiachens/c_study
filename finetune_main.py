@@ -326,8 +326,8 @@ if __name__ == "__main__":
                         help="Whether to use jigsaw")
     parser.add_argument('--model_path', type=str, default='', metavar='N',
                         help='Pretrained model path')
-    parser.add_argument('--scheduer',type=str,default='default',
-                        help="Which lr scheduer to use")
+    parser.add_argument('--scheduler',type=str,default='default',
+                        help="Which lr scheduler to use")
     args = parser.parse_args()
 
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
