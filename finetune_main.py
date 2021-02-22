@@ -153,7 +153,10 @@ def train(args, io):
                                                                                          train_true, train_pred))
 
         io.cprint(outstr)
-        scheduler.step()
+        if args.scheduler == 'plateau':
+            scheduler.step(train_loss*1.0/count)
+        else:
+            scheduler.step()
         
         test(args,io,model=model, dataloader = test_loader)
 
