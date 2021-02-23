@@ -18,10 +18,10 @@ from torch.optim.lr_scheduler import CosineAnnealingLR, ExponentialLR, StepLR, M
 from data import ModelNet40_SSL, ModelNet40, ModelNet40_Jigsaw
 from model_joint import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, DGCNN_Jigsaw
 import numpy as np
-np.random.seed(666)
-torch.cuda.manual_seed_all(666)
-torch.backends.cudnn.deterministic=True
-torch.backends.cudnn.benchmark = False
+# np.random.seed(666)
+# torch.cuda.manual_seed_all(666)
+# torch.backends.cudnn.deterministic=True
+# torch.backends.cudnn.benchmark = False
 from torch.utils.data import DataLoader
 import sys
 sys.path.append("./emd/")
@@ -43,7 +43,11 @@ def _init_():
     os.system('cp util.py '+args.pre_path+'joint_checkpoints' + '/' + args.exp_name + '/' + 'util.py.backup')
     os.system('cp data.py '+args.pre_path+'joint_checkpoints' + '/' + args.exp_name + '/' + 'data.py.backup')
     os.system('cp attack.py '+args.pre_path+'joint_checkpoints' + '/' + args.exp_name + '/' + 'attack.py.backup')
-
+    np.random.seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
+    torch.manual_seed(args.seed)
+    torch.backends.cudnn.deterministic=True
+    torch.backends.cudnn.benchmark = False
 
 def set_bn_eval(m):
     classname = m.__class__.__name__
@@ -435,7 +439,6 @@ if __name__ == "__main__":
     io.cprint(str(args))
 
     args.cuda = not args.no_cuda and torch.cuda.is_available()
-    torch.manual_seed(args.seed)
     if args.cuda:
         io.cprint(
             'Using GPU : ' + str(torch.cuda.current_device()) + ' from ' + str(torch.cuda.device_count()) + ' devices')
