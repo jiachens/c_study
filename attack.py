@@ -41,7 +41,7 @@ def pgd_attack(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=F
             if mixup:
                 loss = cross_entropy_with_probs(outputs,labels)
             else:
-                loss = cal_loss(outputs,trans,labels)
+                loss = cal_loss(outputs,None,labels)
             # print(torch.autograd.grad(loss,adv_data,create_graph=True))   
             loss.backward()
             with torch.no_grad():
@@ -59,7 +59,7 @@ def pgd_attack(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=F
         if mixup:
             loss = cross_entropy_with_probs(outputs,labels)
         else:
-            loss = cal_loss(outputs,trans,labels)
+            loss = cal_loss(outputs,None,labels)
         if loss > max_loss:
             max_loss=loss
             best_examples=adv_data.cpu()
