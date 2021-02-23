@@ -13,6 +13,32 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
+class Dual_BN(nn.Module):
+    def __init__(self, num_channels,eps=1e-3):
+        super().__init__()
+        self.bn = nn.BatchNorm1d(num_channels,eps=eps)
+        self.bn_ssl = nn.BatchNorm1d(num_channels,eps=eps)
+
+    def forward(self,x,flag = False):
+        if flag:
+            x = self.bn_ssl(x)
+        else:
+            x = self.bn(x)
+        return x
+
+class Dual_BN2d(nn.Module):
+    def __init__(self, num_channels):
+        super().__init__()
+        self.bn = nn.BatchNorm2d(num_channels)
+        self.bn_ssl = nn.BatchNorm2d(num_channels)
+
+    def forward(self,x,flag = False):
+        if flag:
+            x = self.bn_ssl(x)
+        else:
+            x = self.bn(x)
+        return x
+
 class STN3d(nn.Module):
     def __init__(self):
         super(STN3d, self).__init__()
@@ -24,23 +50,23 @@ class STN3d(nn.Module):
         self.fc3 = nn.Linear(256, 9)
         self.relu = nn.ReLU()
 
-        self.bn1 = nn.BatchNorm1d(64,eps=1e-03)
-        self.bn2 = nn.BatchNorm1d(128,eps=1e-03)
-        self.bn3 = nn.BatchNorm1d(1024,eps=1e-03)
-        self.bn4 = nn.BatchNorm1d(512,eps=1e-03)
-        self.bn5 = nn.BatchNorm1d(256,eps=1e-03)
+        self.bn1 = Dual_BN(64,eps=1e-03)
+        self.bn2 = Dual_BN(128,eps=1e-03)
+        self.bn3 = Dual_BN(1024,eps=1e-03)
+        self.bn4 = Dual_BN(512,eps=1e-03)
+        self.bn5 = Dual_BN(256,eps=1e-03)
 
 
-    def forward(self, x):
+    def forward(self, x, flag):
         batchsize = x.size()[0]
-        x = F.relu(self.bn1(self.conv1(x)))
-        x = F.relu(self.bn2(self.conv2(x)))
-        x = F.relu(self.bn3(self.conv3(x)))
+        x = F.relu(self.bn1(self.conv1(x), flag))
+        x = F.relu(self.bn2(self.conv2(x), flag))
+        x = F.relu(self.bn3(self.conv3(x), flag))
         x = torch.max(x, 2, keepdim=True)[0]
         x = x.view(-1, 1024)
 
-        x = F.relu(self.bn4(self.fc1(x)))
-        x = F.relu(self.bn5(self.fc2(x)))
+        x = F.relu(self.bn4(self.fc1(x), flag))
+        x = F.relu(self.bn5(self.fc2(x), flag))
         x = self.fc3(x)
 
         iden = Variable(torch.from_numpy(np.array([1,0,0,0,1,0,0,0,1]).astype(np.float32))).view(1,9).repeat(batchsize,1)
@@ -63,24 +89,24 @@ class STNkd(nn.Module):
 
         self.relu = nn.ReLU()
 
-        self.bn1 = nn.BatchNorm1d(64,eps=1e-03)
-        self.bn2 = nn.BatchNorm1d(128,eps=1e-03)
-        self.bn3 = nn.BatchNorm1d(1024,eps=1e-03)
-        self.bn4 = nn.BatchNorm1d(512,eps=1e-03)
-        self.bn5 = nn.BatchNorm1d(256,eps=1e-03)
+        self.bn1 = Dual_BN(64,eps=1e-03)
+        self.bn2 = Dual_BN(128,eps=1e-03)
+        self.bn3 = Dual_BN(1024,eps=1e-03)
+        self.bn4 = Dual_BN(512,eps=1e-03)
+        self.bn5 = Dual_BN(256,eps=1e-03)
 
         self.k = k
 
-    def forward(self, x):
+    def forward(self, x, flag):
         batchsize = x.size()[0]
-        x = F.relu(self.bn1(self.conv1(x)))
-        x = F.relu(self.bn2(self.conv2(x)))
-        x = F.relu(self.bn3(self.conv3(x)))
+        x = F.relu(self.bn1(self.conv1(x), flag))
+        x = F.relu(self.bn2(self.conv2(x), flag))
+        x = F.relu(self.bn3(self.conv3(x), flag))
         x = torch.max(x, 2, keepdim=True)[0]
         x = x.view(-1, 1024)
 
-        x = F.relu(self.bn4(self.fc1(x)))
-        x = F.relu(self.bn5(self.fc2(x)))
+        x = F.relu(self.bn4(self.fc1(x), flag))
+        x = F.relu(self.bn5(self.fc2(x), flag))
         x = self.fc3(x)
 
         iden = Variable(torch.from_numpy(np.eye(self.k).flatten().astype(np.float32))).view(1,self.k*self.k).repeat(batchsize,1)
@@ -188,43 +214,43 @@ class PointNet_Rotation(nn.Module):
         self.conv3 = nn.Conv1d(64, 64, kernel_size=1, bias=False)
         self.conv4 = nn.Conv1d(64, 128, kernel_size=1, bias=False)
         self.conv5 = nn.Conv1d(128, args.emb_dims, kernel_size=1, bias=False)
-        self.bn1 = nn.BatchNorm1d(64,eps=1e-03)
-        self.bn2 = nn.BatchNorm1d(64,eps=1e-03)
-        self.bn3 = nn.BatchNorm1d(64,eps=1e-03)
-        self.bn4 = nn.BatchNorm1d(128,eps=1e-03)
-        self.bn5 = nn.BatchNorm1d(args.emb_dims)
+        self.bn1 = Dual_BN(64,eps=1e-03)
+        self.bn2 = Dual_BN(64,eps=1e-03)
+        self.bn3 = Dual_BN(64,eps=1e-03)
+        self.bn4 = Dual_BN(128,eps=1e-03)
+        self.bn5 = Dual_BN(args.emb_dims,eps=1e-03)
 
         self.linear1 = nn.Linear(args.emb_dims, 512, bias=False)
-        self.bn6 = nn.BatchNorm1d(512,eps=1e-03)
+        self.bn6 = Dual_BN(512,eps=1e-03)
         self.dp1 = nn.Dropout(p=0.3)
         self.linear2 = nn.Linear(512, 256, bias=False)
-        self.bn7 = nn.BatchNorm1d(256,eps=1e-03)
+        self.bn7 = Dual_BN(256,eps=1e-03)
         self.dp2 = nn.Dropout(p=0.3)
         self.linear3 = nn.Linear(256,output_channels)
-        self.pool = MLPPool(args.emb_dims,1,args.num_points)
+        # self.pool = MLPPool(args.emb_dims,1,args.num_points)
 
         if args.rotation:
             self.linear4 = nn.Linear(256,args.angles)
 
     def forward(self, x, rotation=False):
         batch_size = x.size(0)
-        trans = self.stn(x)
+        trans = self.stn(x, rotation)
         x = x.transpose(2, 1)
         x = torch.bmm(x, trans)
         x = x.transpose(2, 1)
-        x = F.relu(self.bn1(self.conv1(x)))
-        x = F.relu(self.bn2(self.conv2(x)))
-        trans_feat = self.fstn(x)
+        x = F.relu(self.bn1(self.conv1(x),rotation))
+        x = F.relu(self.bn2(self.conv2(x),rotation))
+        trans_feat = self.fstn(x, rotation)
         x = x.transpose(2,1)
         x = torch.bmm(x, trans_feat)
         x = x.transpose(2,1)
-        x = F.relu(self.bn3(self.conv3(x)))
-        x = F.relu(self.bn4(self.conv4(x)))
-        x = F.relu(self.bn5(self.conv5(x)))
-        x = self.pool(x).view(batch_size,-1)
-        x = F.relu(self.bn6(self.linear1(x)))
+        x = F.relu(self.bn3(self.conv3(x),rotation))
+        x = F.relu(self.bn4(self.conv4(x),rotation))
+        x = F.relu(self.bn5(self.conv5(x),rotation))
+        x = F.adaptive_max_pool1d(x, 1).squeeze()
+        x = F.relu(self.bn6(self.linear1(x),rotation))
         x = self.dp1(x)
-        x = F.relu(self.bn7(self.linear2(x)))
+        x = F.relu(self.bn7(self.linear2(x),rotation))
         x = self.dp2(x)
         if not rotation:
             x = self.linear3(x)
@@ -245,17 +271,17 @@ class PointNet_Jigsaw(nn.Module):
         self.conv3 = nn.Conv1d(64, 64, kernel_size=1, bias=False)
         self.conv4 = nn.Conv1d(64, 128, kernel_size=1, bias=False)
         self.conv5 = nn.Conv1d(128, args.emb_dims, kernel_size=1, bias=False)
-        self.bn1 = nn.BatchNorm1d(64,eps=1e-03)
-        self.bn2 = nn.BatchNorm1d(64,eps=1e-03)
-        self.bn3 = nn.BatchNorm1d(64,eps=1e-03)
-        self.bn4 = nn.BatchNorm1d(128,eps=1e-03)
-        self.bn5 = nn.BatchNorm1d(args.emb_dims)
+        self.bn1 = Dual_BN(64,eps=1e-03)
+        self.bn2 = Dual_BN(64,eps=1e-03)
+        self.bn3 = Dual_BN(64,eps=1e-03)
+        self.bn4 = Dual_BN(128,eps=1e-03)
+        self.bn5 = Dual_BN(args.emb_dims)
 
         self.linear1 = nn.Linear(args.emb_dims, 512, bias=False)
-        self.bn6 = nn.BatchNorm1d(512,eps=1e-03)
+        self.bn6 = Dual_BN(512,eps=1e-03)
         self.dp1 = nn.Dropout(p=0.3)
         self.linear2 = nn.Linear(512, 256, bias=False)
-        self.bn7 = nn.BatchNorm1d(256,eps=1e-03)
+        self.bn7 = Dual_BN(256,eps=1e-03)
         self.dp2 = nn.Dropout(p=0.3)
         self.linear3 = nn.Linear(256,output_channels)
 
@@ -263,39 +289,39 @@ class PointNet_Jigsaw(nn.Module):
         self.conv7 = nn.Conv1d(512, 256, 1, bias=False)
         self.conv8 = nn.Conv1d(256, 128, 1, bias=False)
         self.conv9 = nn.Conv1d(128, self.k, 1, bias=False)
-        self.bn8 = nn.BatchNorm1d(512,eps=1e-03)
-        self.bn9 = nn.BatchNorm1d(256,eps=1e-03)
-        self.bn10 = nn.BatchNorm1d(128,eps=1e-03)
+        self.bn8 = Dual_BN(512,eps=1e-03)
+        self.bn9 = Dual_BN(256,eps=1e-03)
+        self.bn10 = Dual_BN(128,eps=1e-03)
 
     def forward(self, x, jigsaw=False):
         batchsize = x.size()[0]
-        trans = self.stn(x)
+        trans = self.stn(x,jigsaw)
         x = x.transpose(2, 1)
-        x = torch.bmm(x, trans)
+        x = torch.bmm(x,trans)
         x = x.transpose(2, 1)
-        x = F.relu(self.bn1(self.conv1(x)))
-        x = F.relu(self.bn2(self.conv2(x)))
-        trans_feat = self.fstn(x)
+        x = F.relu(self.bn1(self.conv1(x),jigsaw))
+        x = F.relu(self.bn2(self.conv2(x),jigsaw))
+        trans_feat = self.fstn(x,jigsaw)
         x = x.transpose(2,1)
         x = torch.bmm(x, trans_feat)
         x = x.transpose(2,1)
         pointfeat = x
-        x = F.relu(self.bn3(self.conv3(x)))
-        x = F.relu(self.bn4(self.conv4(x)))
-        x = F.relu(self.bn5(self.conv5(x)))
+        x = F.relu(self.bn3(self.conv3(x),jigsaw))
+        x = F.relu(self.bn4(self.conv4(x),jigsaw))
+        x = F.relu(self.bn5(self.conv5(x),jigsaw))
         x = F.adaptive_max_pool1d(x, 1).squeeze()
         if not jigsaw:
-            x = F.relu(self.bn6(self.linear1(x)))
+            x = F.relu(self.bn6(self.linear1(x),jigsaw))
             x = self.dp1(x)
-            x = F.relu(self.bn7(self.linear2(x)))
+            x = F.relu(self.bn7(self.linear2(x),jigsaw))
             x = self.dp2(x)
             x = self.linear3(x)
         else:
             x = x.view(-1, 1024, 1).repeat(1, 1, self.args.num_points)
             x = torch.cat([x, pointfeat], 1)
-            x = F.relu(self.bn8(self.conv6(x)))
-            x = F.relu(self.bn9(self.conv7(x)))
-            x = F.relu(self.bn10(self.conv8(x)))
+            x = F.relu(self.bn8(self.conv6(x),jigsaw))
+            x = F.relu(self.bn9(self.conv7(x),jigsaw))
+            x = F.relu(self.bn10(self.conv8(x),jigsaw))
             x = self.conv9(x)
             x = x.transpose(2,1).contiguous()
             x = F.log_softmax(x.view(-1,self.k), dim=-1)
@@ -311,43 +337,49 @@ class DGCNN_Rotation(nn.Module):
         # self.FSPool_local=args.fspool_local
         # self.FSPool_global = args.fspool_global
         # self.MLPPool_global = args.mlppool_global
-        self.bn1 = nn.BatchNorm2d(64)
-        self.bn2 = nn.BatchNorm2d(64)
-        self.bn3 = nn.BatchNorm2d(128)
-        self.bn4 = nn.BatchNorm2d(256)
-        self.bn5 = nn.BatchNorm1d(args.emb_dims)
+        self.bn1 = Dual_BN2d(64)
+        self.bn2 = Dual_BN2d(64)
+        self.bn3 = Dual_BN2d(128)
+        self.bn4 = Dual_BN2d(256)
+        self.bn5 = Dual_BN(args.emb_dims)
+
+        self.lrelu = nn.LeakyReLU(negative_slope=0.2)
         
-        self.conv1 = nn.Sequential(nn.Conv2d(6, 64, kernel_size=1, bias=False),
-                                   self.bn1,
-                                   nn.LeakyReLU(negative_slope=0.2))
-        self.conv2 = nn.Sequential(nn.Conv2d(64*2, 64, kernel_size=1, bias=False),
-                                   self.bn2,
-                                   nn.LeakyReLU(negative_slope=0.2))
-        self.conv3 = nn.Sequential(nn.Conv2d(64*2, 128, kernel_size=1, bias=False),
-                                   self.bn3,
-                                   nn.LeakyReLU(negative_slope=0.2))
-        self.conv4 = nn.Sequential(nn.Conv2d(128*2, 256, kernel_size=1, bias=False),
-                                   self.bn4,
-                                   nn.LeakyReLU(negative_slope=0.2))
-        self.conv5 = nn.Sequential(nn.Conv1d(512, args.emb_dims, kernel_size=1, bias=False),
-                                   self.bn5,
-                                   nn.LeakyReLU(negative_slope=0.2))
+        self.conv1 = nn.Conv2d(6, 64, kernel_size=1, bias=False)
+                                   # self.bn1,
+
+        self.conv2 = nn.Conv2d(64*2, 64, kernel_size=1, bias=False)
+                                   # self.bn2,
+                                   # nn.LeakyReLU(negative_slope=0.2))
+
+        self.conv3 = nn.Conv2d(64*2, 128, kernel_size=1, bias=False)
+                                   # self.bn3,
+                                   # nn.LeakyReLU(negative_slope=0.2))
+
+        self.conv4 = nn.Conv2d(128*2, 256, kernel_size=1, bias=False)
+                                   # self.bn4,
+                                   # nn.LeakyReLU(negative_slope=0.2))
+
+        self.conv5 = nn.Conv1d(512, args.emb_dims, kernel_size=1, bias=False)
+                                   # self.bn5,
+                                   # nn.LeakyReLU(negative_slope=0.2))
+
         self.linear1 = nn.Linear(args.emb_dims*2, 512, bias=False)
-        self.bn6 = nn.BatchNorm1d(512)
+        self.bn6 = Dual_BN(512)
         self.dp1 = nn.Dropout(p=args.dropout)
         self.linear2 = nn.Linear(512, 256)
-        self.bn7 = nn.BatchNorm1d(256)
+        self.bn7 = Dual_BN(256)
         self.dp2 = nn.Dropout(p=args.dropout)
         self.linear3 = nn.Linear(256, output_channels)
 
         if args.rotation:
-            self.linear4 = nn.Linear(args.emb_dims*2, 512, bias=False)
-            self.bn8 = nn.BatchNorm1d(512)
-            self.dp3 = nn.Dropout(p=args.dropout)
-            self.linear5 = nn.Linear(512, 256)
-            self.bn9 = nn.BatchNorm1d(256)
-            self.dp4 = nn.Dropout(p=args.dropout)
-            self.linear6 = nn.Linear(256, args.angles)
+            # self.linear4 = nn.Linear(args.emb_dims*2, 512, bias=False)
+            # self.bn8 = Dual_BN(512)
+            # self.dp3 = nn.Dropout(p=args.dropout)
+            # self.linear5 = nn.Linear(512, 256)
+            # self.bn9 = Dual_BN(256)
+            # self.dp4 = nn.Dropout(p=args.dropout)
+            self.linear4 = nn.Linear(256, args.angles)
         
         # if(self.FSPool_local):
         #     self.pool1 = FSPOOL(64,args.k)
@@ -368,24 +400,24 @@ class DGCNN_Rotation(nn.Module):
     def forward(self, x, rotation=False):
         batch_size = x.size(0)
         x = get_graph_feature(x, k=self.k)
-        x = self.conv1(x)
+        x = self.lrelu(self.bn1(self.conv1(x), rotation))
         x1 = self.pool1(x)
 
         x = get_graph_feature(x1, k=self.k)
-        x = self.conv2(x)
+        x = self.lrelu(self.bn2(self.conv2(x), rotation))
         x2 = self.pool2(x)
 
         x = get_graph_feature(x2, k=self.k)
-        x = self.conv3(x)
+        x = self.lrelu(self.bn3(self.conv3(x), rotation))
         x3 = self.pool3(x)
 
         x = get_graph_feature(x3, k=self.k)
-        x = self.conv4(x)
+        x = self.lrelu(self.bn4(self.conv4(x), rotation))
         x4 = self.pool4(x)
 
         x = torch.cat((x1, x2, x3, x4), dim=1)
 
-        x = self.conv5(x)
+        x = self.lrelu(self.bn5(self.conv5(x), rotation))
 
         # if(self.FSPool_global):
         #     x = x.unsqueeze(2)
@@ -398,19 +430,16 @@ class DGCNN_Rotation(nn.Module):
         x1 = F.adaptive_max_pool1d(x, 1).view(batch_size, -1)
         x2 = F.adaptive_avg_pool1d(x, 1).view(batch_size, -1)
         x = torch.cat((x1, x2), 1)
+
+        x = F.leaky_relu(self.bn6(self.linear1(x),rotation), negative_slope=0.2)
+        x = self.dp1(x)
+        x = F.leaky_relu(self.bn7(self.linear2(x),rotation), negative_slope=0.2)
+        x = self.dp2(x)
         
         if not rotation:
-            x = F.leaky_relu(self.bn6(self.linear1(x)), negative_slope=0.2)
-            x = self.dp1(x)
-            x = F.leaky_relu(self.bn7(self.linear2(x)), negative_slope=0.2)
-            x = self.dp2(x)
             x = self.linear3(x)
         else:
-            x = F.leaky_relu(self.bn8(self.linear4(x)), negative_slope=0.2)
-            x = self.dp3(x)
-            x = F.leaky_relu(self.bn9(self.linear5(x)), negative_slope=0.2)
-            x = self.dp4(x)
-            x = self.linear6(x)
+            x = self.linear4(x)
         return x, None, None
 
 class DGCNN_Jigsaw(nn.Module):
@@ -422,33 +451,39 @@ class DGCNN_Jigsaw(nn.Module):
         # self.FSPool_local=args.fspool_local
         # self.FSPool_global = args.fspool_global
         # self.MLPPool_global = args.mlppool_global
-        self.bn1 = nn.BatchNorm2d(64)
-        self.bn2 = nn.BatchNorm2d(64)
-        self.bn3 = nn.BatchNorm2d(128)
-        self.bn4 = nn.BatchNorm2d(256)
-        self.bn5 = nn.BatchNorm1d(args.emb_dims)
+        self.bn1 = Dual_BN2d(64)
+        self.bn2 = Dual_BN2d(64)
+        self.bn3 = Dual_BN2d(128)
+        self.bn4 = Dual_BN2d(256)
+        self.bn5 = Dual_BN(args.emb_dims)
         
-        self.conv1 = nn.Sequential(nn.Conv2d(6, 64, kernel_size=1, bias=False),
-                                   self.bn1,
-                                   nn.LeakyReLU(negative_slope=0.2))
-        self.conv2 = nn.Sequential(nn.Conv2d(64*2, 64, kernel_size=1, bias=False),
-                                   self.bn2,
-                                   nn.LeakyReLU(negative_slope=0.2))
-        self.conv3 = nn.Sequential(nn.Conv2d(64*2, 128, kernel_size=1, bias=False),
-                                   self.bn3,
-                                   nn.LeakyReLU(negative_slope=0.2))
-        self.conv4 = nn.Sequential(nn.Conv2d(128*2, 256, kernel_size=1, bias=False),
-                                   self.bn4,
-                                   nn.LeakyReLU(negative_slope=0.2))
-        self.conv5 = nn.Sequential(nn.Conv1d(512, args.emb_dims, kernel_size=1, bias=False),
-                                   self.bn5,
-                                   nn.LeakyReLU(negative_slope=0.2))
+
+        self.lrelu = nn.LeakyReLU(negative_slope=0.2)
+        
+        self.conv1 = nn.Conv2d(6, 64, kernel_size=1, bias=False)
+                                   # self.bn1,
+
+        self.conv2 = nn.Conv2d(64*2, 64, kernel_size=1, bias=False)
+                                   # self.bn2,
+                                   # nn.LeakyReLU(negative_slope=0.2))
+
+        self.conv3 = nn.Conv2d(64*2, 128, kernel_size=1, bias=False)
+                                   # self.bn3,
+                                   # nn.LeakyReLU(negative_slope=0.2))
+
+        self.conv4 = nn.Conv2d(128*2, 256, kernel_size=1, bias=False)
+                                   # self.bn4,
+                                   # nn.LeakyReLU(negative_slope=0.2))
+
+        self.conv5 = nn.Conv1d(512, args.emb_dims, kernel_size=1, bias=False)
+                                   # self.bn5,
+                                   # nn.LeakyReLU(negative_slope=0.2))
         
         self.linear1 = nn.Linear(args.emb_dims*2, 512, bias=False)
-        self.bn6 = nn.BatchNorm1d(512)
+        self.bn6 = Dual_BN(512)
         self.dp1 = nn.Dropout(p=args.dropout)
         self.linear2 = nn.Linear(512, 256)
-        self.bn7 = nn.BatchNorm1d(256)
+        self.bn7 = Dual_BN(256)
         self.dp2 = nn.Dropout(p=args.dropout)
         self.linear3 = nn.Linear(256, output_channels)
 
@@ -458,9 +493,9 @@ class DGCNN_Jigsaw(nn.Module):
             self.conv7 = nn.Conv1d(512, 256, 1, bias=False)
             self.conv8 = nn.Conv1d(256, 128, 1, bias=False)
             self.conv9 = nn.Conv1d(128, self.k1, 1, bias=False)
-            self.bn8 = nn.BatchNorm1d(512)
-            self.bn9 = nn.BatchNorm1d(256)
-            self.bn10 = nn.BatchNorm1d(128)
+            self.bn8 = Dual_BN(512)
+            self.bn9 = Dual_BN(256)
+            self.bn10 = Dual_BN(128)
 
         self.pool1 = MAXPOOL()
         self.pool2 = MAXPOOL()
@@ -475,26 +510,26 @@ class DGCNN_Jigsaw(nn.Module):
     def forward(self, x, jigsaw=False):
         batch_size = x.size(0)
         x = get_graph_feature(x, k=self.k)
-        x = self.conv1(x)
+        x = self.lrelu(self.bn1(self.conv1(x), jigsaw))
         x1 = self.pool1(x)
 
         x = get_graph_feature(x1, k=self.k)
-        x = self.conv2(x)
+        x = self.lrelu(self.bn2(self.conv2(x), jigsaw))
         x2 = self.pool2(x)
 
         pointfeat = x2
 
         x = get_graph_feature(x2, k=self.k)
-        x = self.conv3(x)
+        x = self.lrelu(self.bn3(self.conv3(x), jigsaw))
         x3 = self.pool3(x)
 
         x = get_graph_feature(x3, k=self.k)
-        x = self.conv4(x)
+        x = self.lrelu(self.bn4(self.conv4(x), jigsaw))
         x4 = self.pool4(x)
 
         x = torch.cat((x1, x2, x3, x4), dim=1)
 
-        x = self.conv5(x)
+        x = self.lrelu(self.bn5(self.conv5(x), jigsaw))
 
         # if(self.FSPool_global):
         #     x = x.unsqueeze(2)
@@ -512,17 +547,17 @@ class DGCNN_Jigsaw(nn.Module):
             x = x.view(-1, self.args.emb_dims * 2, 1).repeat(1, 1, self.args.num_points)
             x = torch.cat([x, pointfeat], 1)
             
-            x = F.relu(self.bn8(self.conv6(x)))
-            x = F.relu(self.bn9(self.conv7(x)))
-            x = F.relu(self.bn10(self.conv8(x)))
+            x = F.leaky_relu(self.bn8(self.conv6(x),jigsaw), negative_slope=0.2)
+            x = F.leaky_relu(self.bn9(self.conv7(x),jigsaw), negative_slope=0.2)
+            x = F.leaky_relu(self.bn10(self.conv8(x),jigsaw), negative_slope=0.2)
             x = self.conv9(x)
             x = x.transpose(2,1).contiguous()
             x = F.log_softmax(x.view(-1,self.k1), dim=-1)
             x = x.view(batch_size, self.args.num_points, self.k1)
         else:
-            x = F.leaky_relu(self.bn6(self.linear1(x)), negative_slope=0.2)
+            x = F.leaky_relu(self.bn6(self.linear1(x),jigsaw), negative_slope=0.2)
             x = self.dp1(x)
-            x = F.leaky_relu(self.bn7(self.linear2(x)), negative_slope=0.2)
+            x = F.leaky_relu(self.bn7(self.linear2(x),jigsaw), negative_slope=0.2)
             x = self.dp2(x)
             x = self.linear3(x)
         # if not rotation:

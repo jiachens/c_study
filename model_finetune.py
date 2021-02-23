@@ -145,9 +145,9 @@ class DeepSym_Jigsaw(nn.Module):
         self.conv7 = nn.Conv1d(512, 256, 1, bias=False)
         self.conv8 = nn.Conv1d(256, 128, 1, bias=False)
         self.conv9 = nn.Conv1d(128, self.k, 1, bias=False)
-        self.bn6 = nn.BatchNorm1d(512,eps=1e-03)
-        self.bn7 = nn.BatchNorm1d(256,eps=1e-03)
-        self.bn8 = nn.BatchNorm1d(128,eps=1e-03)
+        self.bn101 = nn.BatchNorm1d(512,eps=1e-03)
+        self.bn102 = nn.BatchNorm1d(256,eps=1e-03)
+        self.bn103 = nn.BatchNorm1d(128,eps=1e-03)
 
     def forward(self, x):
         batchsize = x.size()[0]
@@ -169,9 +169,9 @@ class DeepSym_Jigsaw(nn.Module):
 
         x = x.view(-1, 1024, 1).repeat(1, 1, self.args.num_points)
         x = torch.cat([x, pointfeat], 1)
-        x = F.relu(self.bn6(self.conv6(x)))
-        x = F.relu(self.bn7(self.conv7(x)))
-        x = F.relu(self.bn8(self.conv8(x)))
+        x = F.relu(self.bn101(self.conv6(x)))
+        x = F.relu(self.bn102(self.conv7(x)))
+        x = F.relu(self.bn103(self.conv8(x)))
         x = self.conv9(x)
         x = x.transpose(2,1).contiguous()
         x = F.log_softmax(x.view(-1,self.k), dim=-1)

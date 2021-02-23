@@ -171,7 +171,7 @@ def train(args, io):
             elif args.jigsaw:             
                 jigsaw_data, jigsaw_label = aug_data.to(device).float(), aug_label.to(device).squeeze().long()
                 if args.adversarial:
-                    data = attack.pgd_attack(model,data,label,eps=EPS,alpha=ALPHA,iters=TRAIN_ITER,mixup=False) 
+                    data = attack.pgd_attack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.train_iter,mixup=False) 
                     model.train()
                 opt.zero_grad()
                 logits,trans,trans_feat = model(data,jigsaw = False)
