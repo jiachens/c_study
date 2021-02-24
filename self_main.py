@@ -18,10 +18,6 @@ from torch.optim.lr_scheduler import CosineAnnealingLR, ExponentialLR, StepLR, M
 from data import ModelNet40_SSL
 from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, DGCNN_Jigsaw, DeepSym_Rotation, DeepSym_Jigsaw
 import numpy as np
-# np.random.seed(666)
-# torch.cuda.manual_seed_all(666)
-# torch.backends.cudnn.deterministic=True
-# torch.backends.cudnn.benchmark = False
 from torch.utils.data import DataLoader
 import sys
 sys.path.append("./emd/")
@@ -30,10 +26,6 @@ from util import cal_loss, IOStream, cross_entropy_with_probs,trades_loss
 import sklearn.metrics as metrics
 import attack
 import time
-# EPS=0.05
-# ALPHA=0.01
-# TRAIN_ITER=7
-# TEST_ITER=7
 
 def _init_():
     if not os.path.exists(args.pre_path + 'ssl_checkpoints'):
