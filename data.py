@@ -67,22 +67,22 @@ def jitter_pointcloud(pointcloud, sigma=0.01, clip=0.05):
     jitter = np.clip(sigma * np.random.randn(N, C), -1*clip, clip)
     return (pointcloud + jitter).astype('float32'),jitter.astype('float32') 
 
-class ATTA_ModelNet40(Dataset):
-    def __init__(self, num_points):
-        self.data, self.label = load_data('train')
-        self.num_points = num_points
+# class ATTA_ModelNet40(Dataset):
+#     def __init__(self, num_points):
+#         self.data, self.label = load_data('train')
+#         self.num_points = num_points
         
-    def __getitem__(self, item):
-        pointcloud = self.data[item][:self.num_points]
-        label = self.label[item]
-        pointcloud,jitter=jitter_pointcloud(pointcloud)
-        idx = np.arange(pointcloud.shape[0])
-        np.random.shuffle(idx)
-        transform=(jitter,idx)
-        return pointcloud[idx], label,item,transform
+#     def __getitem__(self, item):
+#         pointcloud = self.data[item][:self.num_points]
+#         label = self.label[item]
+#         pointcloud,jitter=jitter_pointcloud(pointcloud)
+#         idx = np.arange(pointcloud.shape[0])
+#         np.random.shuffle(idx)
+#         transform=(jitter,idx)
+#         return pointcloud[idx], label,item,transform
 
-    def __len__(self):
-        return self.data.shape[0]
+#     def __len__(self):
+#         return self.data.shape[0]
 
 def rotate_data(data, label):
     """ Rotate a batch of points by the label
@@ -146,25 +146,32 @@ def rotate_point_cloud_by_angle_xyz(data, angle_x=0, angle_y=0, angle_z=0):
     return rotated_data.reshape(data.shape)
 
 class ModelNet40(Dataset):
-    def __init__(self, num_points, partition='train', rotation=False, angles=6):
+    def __init__(self, num_points, partition='train', translate = False, jitter=True, rotation=False, angles=6):
         self.data, self.label = load_data(partition)
         self.num_points = num_points
         self.partition = partition
         self.rotation = rotation
         self.angles = angles
-
+        self.jitter = jitter
+        self.translate = translate
 
     def __getitem__(self, item):
         pointcloud = self.data[item][:self.num_points]
         label = self.label[item]
         if not self.rotation:
             if self.partition == 'train':
-                pointcloud,_ = jitter_pointcloud(pointcloud)
+                if self.jitter:
+                    pointcloud,_ = jitter_pointcloud(pointcloud)
+                if self.translate:
+                    pointcloud,_,_ = translate_pointcloud(pointcloud)
                 # np.random.shuffle(pointcloud)
             return pointcloud.astype('float32'), label, pointcloud.astype('float32'), label # the latter two are not used
         else:
             if self.partition == 'train':
-                pointcloud,_ = jitter_pointcloud(pointcloud)
+                if self.jitter:
+                    pointcloud,_ = jitter_pointcloud(pointcloud)
+                if self.translate:
+                    pointcloud,_,_ = translate_pointcloud(pointcloud)
                 # np.random.shuffle(pointcloud)
             rotation_label = np.random.randint(self.angles)
             #rotation_label = np.squeeze(rotation_label)
