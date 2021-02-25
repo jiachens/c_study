@@ -93,7 +93,7 @@ def train(args, io):
 
     if args.use_sgd:
         print("Use SGD")
-        opt = optim.SGD(model.parameters(), lr=args.lr*100, momentum=args.momentum, weight_decay=1e-4)
+        opt = optim.SGD(model.parameters(), lr=args.lr*100, momentum=args.momentum)
     else:
         print("Use Adam")
         opt = optim.Adam(model.parameters(), lr=args.lr)
@@ -107,6 +107,8 @@ def train(args, io):
         scheduler = CosineAnnealingLR(opt, args.epochs, eta_min=0.00001)
     elif args.scheduler == 'piecewise':
         scheduler = MultiStepLR(opt, milestones=[100,150,200], gamma=0.1)
+    elif args.scheduler == 'pct':
+        scheduler = CosineAnnealingLR(opt, args.epochs, eta_min=args.lr)
 
     criterion = cal_loss
 
