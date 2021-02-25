@@ -16,7 +16,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import CosineAnnealingLR, ExponentialLR, StepLR, MultiStepLR
 from data import ModelNet40_SSL
-from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, DGCNN_Jigsaw, DeepSym_Rotation, DeepSym_Jigsaw
+from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, DGCNN_Jigsaw, DeepSym_Rotation, DeepSym_Jigsaw, Pct_Jigsaw, Pct_Rotation
 import numpy as np
 from torch.utils.data import DataLoader
 import sys
@@ -73,6 +73,10 @@ def train(args, io):
         model = DeepSym_Jigsaw(args).to(device)
     elif args.model == 'deepsym_rotation':
         model = DeepSym_Rotation(args).to(device)
+    elif args.model == 'pct_jigsaw':
+        model = Pct_Jigsaw(args).to(device)
+    elif args.model == 'pct_rotation':
+        model = Pct_Rotation(args).to(device)
     else:
         raise Exception("Not implemented")
 
@@ -224,6 +228,10 @@ def test(args, io,model=None, dataloader=None):
             model = DeepSym_Jigsaw(args).to(device)
         elif args.model == 'deepsym_rotation':
             model = DeepSym_Rotation(args).to(device)
+        elif args.model == 'pct_jigsaw':
+            model = Pct_Jigsaw(args).to(device)
+        elif args.model == 'pct_rotation':
+            model = Pct_Rotation(args).to(device)
         else:
             raise Exception("Not implemented")
         model = nn.DataParallel(model)
@@ -278,6 +286,10 @@ def adversarial(args,io,model=None, dataloader=None):
             model = DeepSym_Jigsaw(args).to(device)
         elif args.model == 'deepsym_rotation':
             model = DeepSym_Rotation(args).to(device)
+        elif args.model == 'pct_jigsaw':
+            model = Pct_Jigsaw(args).to(device)
+        elif args.model == 'pct_rotation':
+            model = Pct_Rotation(args).to(device)
         else:
             raise Exception("Not implemented")
         model = nn.DataParallel(model)
@@ -313,7 +325,7 @@ if __name__ == "__main__":
     parser.add_argument('--exp_name', type=str, default='exp', metavar='N',
                         help='Name of the experiment')
     parser.add_argument('--model', type=str, default='dgcnn', metavar='N',
-                        choices=['pointnet_rotation', 'dgcnn_rotation', 'pointnet_jigsaw', 'dgcnn_jigsaw', 'deepsym_jigsaw', 'deepsym_rotation'],
+                        choices=['pointnet_rotation', 'dgcnn_rotation', 'pointnet_jigsaw', 'dgcnn_jigsaw', 'deepsym_jigsaw', 'deepsym_rotation','pct_rotation','pct_jigsaw'],
                         help='Model to use, [pointnet, dgcnn]')
     parser.add_argument('--dataset', type=str, default='modelnet40', metavar='N',
                         choices=['modelnet40'])

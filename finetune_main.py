@@ -58,7 +58,7 @@ def set_bn_eval(m):
 def train(args, io):
 
     flag_translate = (args.model == 'pct')
-    train_loader = DataLoader(ModelNet40(partition='train', num_points=args.num_points, transalate=flag_translate), num_workers=8,
+    train_loader = DataLoader(ModelNet40(partition='train', num_points=args.num_points, translate=flag_translate), num_workers=8,
                               batch_size=args.batch_size, shuffle=True, drop_last=True)
     test_loader = DataLoader(ModelNet40(partition='test', num_points=args.num_points), num_workers=8,
                              batch_size=args.test_batch_size, shuffle=False, drop_last=False)
