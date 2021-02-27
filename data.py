@@ -74,11 +74,15 @@ def parse_dataset_modelnet10(partition,num_points=1024):
         if partition == 'train':
             for f in train_files:
                 raw = np.load(f)[index,:]
-                mean_x, mean_y, mean_z = np.mean(raw[:,0]), np.mean(raw[:,1]), np.mean(raw[:,2])
-                raw[:,0] -= mean_x
-                raw[:,1] -= mean_y
-                raw[:,2] -= mean_z
+                # print(np.max(raw),np.min(raw))
+                # mean_x, mean_y, mean_z = np.mean(raw[:,0]), np.mean(raw[:,1]), np.mean(raw[:,2])
+                # raw[:,0] -= mean_x
+                # raw[:,1] -= mean_y
+                # raw[:,2] -= mean_z
                 leng_x, leng_y, leng_z = np.max(raw[:,0]) - np.min(raw[:,0]), np.max(raw[:,1]) - np.min(raw[:,1]), np.max(raw[:,2]) - np.min(raw[:,2])
+                raw[:,0] -= (np.max(raw[:,0]) + np.min(raw[:,0])) / 2
+                raw[:,1] -= (np.max(raw[:,1]) + np.min(raw[:,1])) / 2
+                raw[:,2] -= (np.max(raw[:,2]) + np.min(raw[:,2])) / 2
                 if leng_x >= leng_y and leng_x >= leng_z:
                     ratio = 2.0 / leng_x
                 elif leng_y >= leng_x and leng_y >= leng_z:
@@ -87,7 +91,6 @@ def parse_dataset_modelnet10(partition,num_points=1024):
                     ratio = 2.0 / leng_z
 
                 raw *= ratio
-
                 train_points.append(raw)
                 train_labels.append(i)
 
@@ -95,11 +98,10 @@ def parse_dataset_modelnet10(partition,num_points=1024):
         elif partition == 'test':
             for f in test_files:
                 raw = np.load(f)[index,:]
-                mean_x, mean_y, mean_z = np.mean(raw[:,0]), np.mean(raw[:,1]), np.mean(raw[:,2])
-                raw[:,0] -= mean_x
-                raw[:,1] -= mean_y
-                raw[:,2] -= mean_z
                 leng_x, leng_y, leng_z = np.max(raw[:,0]) - np.min(raw[:,0]), np.max(raw[:,1]) - np.min(raw[:,1]), np.max(raw[:,2]) - np.min(raw[:,2])
+                raw[:,0] -= (np.max(raw[:,0]) + np.min(raw[:,0])) / 2
+                raw[:,1] -= (np.max(raw[:,1]) + np.min(raw[:,1])) / 2
+                raw[:,2] -= (np.max(raw[:,2]) + np.min(raw[:,2])) / 2
                 if leng_x >= leng_y and leng_x >= leng_z:
                     ratio = 2.0 / leng_x
                 elif leng_y >= leng_x and leng_y >= leng_z:
@@ -147,11 +149,10 @@ def parse_dataset_shapenet10(partition,num_points=1024):
         if partition == 'train':
             for f in train_files:
                 raw = np.load(f)[index,:]
-                mean_x, mean_y, mean_z = np.mean(raw[:,0]), np.mean(raw[:,1]), np.mean(raw[:,2])
-                raw[:,0] -= mean_x
-                raw[:,1] -= mean_y
-                raw[:,2] -= mean_z
                 leng_x, leng_y, leng_z = np.max(raw[:,0]) - np.min(raw[:,0]), np.max(raw[:,1]) - np.min(raw[:,1]), np.max(raw[:,2]) - np.min(raw[:,2])
+                raw[:,0] -= (np.max(raw[:,0]) + np.min(raw[:,0])) / 2
+                raw[:,1] -= (np.max(raw[:,1]) + np.min(raw[:,1])) / 2
+                raw[:,2] -= (np.max(raw[:,2]) + np.min(raw[:,2])) / 2
                 if leng_x >= leng_y and leng_x >= leng_z:
                     ratio = 2.0 / leng_x
                 elif leng_y >= leng_x and leng_y >= leng_z:
@@ -163,16 +164,14 @@ def parse_dataset_shapenet10(partition,num_points=1024):
 
                 train_points.append(raw)
                 train_labels.append(i)
-            return np.array(train_points), np.array(train_labels)
-
+            
         elif partition == 'test':
             for f in test_files:
                 raw = np.load(f)[index,:]
-                mean_x, mean_y, mean_z = np.mean(raw[:,0]), np.mean(raw[:,1]), np.mean(raw[:,2])
-                raw[:,0] -= mean_x
-                raw[:,1] -= mean_y
-                raw[:,2] -= mean_z
                 leng_x, leng_y, leng_z = np.max(raw[:,0]) - np.min(raw[:,0]), np.max(raw[:,1]) - np.min(raw[:,1]), np.max(raw[:,2]) - np.min(raw[:,2])
+                raw[:,0] -= (np.max(raw[:,0]) + np.min(raw[:,0])) / 2
+                raw[:,1] -= (np.max(raw[:,1]) + np.min(raw[:,1])) / 2
+                raw[:,2] -= (np.max(raw[:,2]) + np.min(raw[:,2])) / 2
                 if leng_x >= leng_y and leng_x >= leng_z:
                     ratio = 2.0 / leng_x
                 elif leng_y >= leng_x and leng_y >= leng_z:
@@ -184,7 +183,11 @@ def parse_dataset_shapenet10(partition,num_points=1024):
 
                 test_points.append(raw)
                 test_labels.append(i)
-            return np.array(test_points), np.array(test_labels)
+
+    if partition == 'train':
+        return np.array(train_points), np.array(train_labels)
+    elif partition == 'test':
+        return np.array(test_points), np.array(test_labels)
 
     # np.save('./data/ModelNet10/train_points.npy',np.array(train_points))
     # np.save('./data/ModelNet10/test_points.npy',np.array(test_points))
@@ -211,10 +214,10 @@ def parse_dataset_scanobject(partition,num_points=1024):
         f = h5py.File(os.path.join(DATA_DIR, "train.h5"))
         train_data = f['data'][:][:,index,:]
         for i in range(train_data.shape[0]):
-            mean_x, mean_y, mean_z = np.mean(train_data[i,:,0]), np.mean(train_data[i,:,1]), np.mean(train_data[i,:,2])
-            train_data[i,:,0] -= mean_x
-            train_data[i,:,1] -= mean_y
-            train_data[i,:,2] -= mean_z
+            # mean_x, mean_y, mean_z = np.mean(train_data[i,:,0]), np.mean(train_data[i,:,1]), np.mean(train_data[i,:,2])
+            train_data[i,:,0] -= (np.max(train_data[i,:,0]) + np.min(train_data[i,:,0])) / 2
+            train_data[i,:,1] -= (np.max(train_data[i,:,1]) + np.min(train_data[i,:,1])) / 2
+            train_data[i,:,2] -= (np.max(train_data[i,:,2]) + np.min(train_data[i,:,2])) / 2
             leng_x, leng_y, leng_z = np.max(train_data[i,:,0]) - np.min(train_data[i,:,0]), np.max(train_data[i,:,1]) - np.min(train_data[i,:,1]), np.max(train_data[i,:,2]) - np.min(train_data[i,:,2])
             if leng_x >= leng_y and leng_x >= leng_z:
                 ratio = 2.0 / leng_x
@@ -233,10 +236,10 @@ def parse_dataset_scanobject(partition,num_points=1024):
         f = h5py.File(os.path.join(DATA_DIR, "test.h5"))
         test_data = f['data'][:][:,index,:]
         for i in range(test_data.shape[0]):
-            mean_x, mean_y, mean_z = np.mean(test_data[i,:,0]), np.mean(test_data[i,:,1]), np.mean(test_data[i,:,2])
-            test_data[i,:,0] -= mean_x
-            test_data[i,:,1] -= mean_y
-            test_data[i,:,2] -= mean_z
+            # mean_x, mean_y, mean_z = np.mean(test_data[i,:,0]), np.mean(test_data[i,:,1]), np.mean(test_data[i,:,2])
+            test_data[i,:,0] -= (np.max(test_data[i,:,0]) + np.min(test_data[i,:,0])) / 2
+            test_data[i,:,1] -= (np.max(test_data[i,:,1]) + np.min(test_data[i,:,1])) / 2
+            test_data[i,:,2] -= (np.max(test_data[i,:,2]) + np.min(test_data[i,:,2])) / 2
             leng_x, leng_y, leng_z = np.max(test_data[i,:,0]) - np.min(test_data[i,:,0]), np.max(test_data[i,:,1]) - np.min(test_data[i,:,1]), np.max(test_data[i,:,2]) - np.min(test_data[i,:,2])
             if leng_x >= leng_y and leng_x >= leng_z:
                 ratio = 2.0 / leng_x
@@ -460,6 +463,7 @@ def generate_jigsaw_data_label(pointcloud, k):
     label = np.concatenate(label)
 
     jigsaw_pointcloud,label = shuffle_data(jigsaw_pointcloud,label)
+    # print(jigsaw_pointcloud.shape)
 
     return jigsaw_pointcloud, label
 
@@ -480,6 +484,8 @@ class PCData_SSL(Dataset):
         self.k = k
         self.rotation = rotation
         self.angles = angles
+
+        # print(np.max(self.data), np.min(self.data))
 
 
     def __getitem__(self, item):
@@ -529,6 +535,7 @@ class PCData_Jigsaw(Dataset):
         self.partition = partition
         self.jigsaw = jigsaw
         self.k = k
+
 
 
     def __getitem__(self, item):
