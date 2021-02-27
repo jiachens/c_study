@@ -45,8 +45,9 @@ def download():
     #     os.system('mv %s %s' % (zipfile[:-4], DATA_DIR))
     #     os.system('rm %s' % (zipfile))
     if not os.path.exists(os.path.join(DATA_DIR, 'PointDA_data')):
-        os.system('python gdrivedl.py https://drive.google.com/file/d/1-LfJWL5geF9h0Z2QpdTL0n4lShy8wy2J/view\\?usp\\=sharing -P ./data -q')
-        os.system('unzip -qq ./data/PointDA_data.zip')
+        os.system('python gdrivedl.py https://drive.google.com/file/d/1-LfJWL5geF9h0Z2QpdTL0n4lShy8wy2J/view\\?usp\\=sharing -q')
+        os.system('unzip -qq ./PointDA_data.zip')
+        os.system('mv PointDA_data ./data/')
 
     if not os.path.exists(os.path.join(DATA_DIR, 'ScanObjectNN')):
         os.system('mkdir ./data/ScanObjectNN')
