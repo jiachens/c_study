@@ -604,7 +604,7 @@ class MAXPOOL(nn.Module):
         return x.max(dim=-1, keepdim=False)[0]
 
 class PointNet_Simple(nn.Module):
-    def __init__(self, args):
+    def __init__(self, args, output_channels=40):
         super(PointNet_Simple, self).__init__()
         self.args = args
         #self.stn = STN3d()
@@ -655,7 +655,7 @@ class PointNet_Simple(nn.Module):
 
 
 class PointNet(nn.Module):
-    def __init__(self, args):
+    def __init__(self, args, output_channels=40):
         super(PointNet, self).__init__()
         self.args = args
         self.stn = STN3d()
@@ -679,7 +679,7 @@ class PointNet(nn.Module):
         self.dp2 = nn.Dropout(p=0.3)
 
         ## new ##
-        self.linear100 = nn.Linear(256,40)
+        self.linear100 = nn.Linear(256,output_channels)
 
     def forward(self, x):
         trans = self.stn(x)
@@ -810,7 +810,7 @@ class PointNet_Jigsaw(nn.Module):
         return x, trans, trans_feat
 
 class DGCNN(nn.Module):
-    def __init__(self, args):
+    def __init__(self, args, output_channels=40):
         super(DGCNN, self).__init__()
         self.args = args
         self.k = args.k
@@ -845,7 +845,7 @@ class DGCNN(nn.Module):
         self.bn7 = nn.BatchNorm1d(256)
         self.dp2 = nn.Dropout(p=args.dropout)
 
-        self.linear100 = nn.Linear(256, 40)
+        self.linear100 = nn.Linear(256, output_channels)
 
         # if args.rotation:
         #     self.linear4 = nn.Linear(args.emb_dims*2, 512, bias=False)

@@ -15,7 +15,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import CosineAnnealingLR, ExponentialLR, StepLR, MultiStepLR
-from data import ModelNet40_SSL
+from data import PCData_SSL, PCData, PCData_Jigsaw
 from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, DGCNN_Jigsaw, DeepSym_Rotation, DeepSym_Jigsaw, Pct_Jigsaw, Pct_Rotation
 import numpy as np
 from torch.utils.data import DataLoader
@@ -53,9 +53,9 @@ def set_bn_eval(m):
 
 def train(args, io):
 
-    train_loader = DataLoader(ModelNet40_SSL(partition='train', num_points=args.num_points, rotation=args.rotation, angles=args.angles, jigsaw=args.jigsaw, k=args.k1), num_workers=8,
+    train_loader = DataLoader(PCData_SSL(name=args.dataset, partition='train', num_points=args.num_points, rotation=args.rotation, angles=args.angles, jigsaw=args.jigsaw, k=args.k1), num_workers=8,
                               batch_size=args.batch_size, shuffle=True, drop_last=True)
-    test_loader = DataLoader(ModelNet40_SSL(partition='test', num_points=args.num_points, rotation=args.rotation, angles=args.angles, jigsaw=args.jigsaw, k=args.k1), num_workers=8,
+    test_loader = DataLoader(PCData_SSL(name=args.dataset,partition='test', num_points=args.num_points, rotation=args.rotation, angles=args.angles, jigsaw=args.jigsaw, k=args.k1), num_workers=8,
                              batch_size=args.test_batch_size, shuffle=False, drop_last=False)
 
     device = torch.device("cuda" if args.cuda else "cpu")
@@ -207,7 +207,7 @@ def train(args, io):
 def test(args, io,model=None, dataloader=None):
 
     if dataloader == None:
-        test_loader = DataLoader(ModelNet40_SSL(partition='test', num_points=args.num_points, rotation=args.rotation, angles=args.angles, jigsaw=args.jigsaw, k=args.k1), num_workers=8,
+        test_loader = DataLoader(PCData_SSL(name=args.dataset,partition='test', num_points=args.num_points, rotation=args.rotation, angles=args.angles, jigsaw=args.jigsaw, k=args.k1), num_workers=8,
                              batch_size=args.test_batch_size, shuffle=False, drop_last=False)
     else:
         test_loader = dataloader
@@ -265,7 +265,7 @@ def test(args, io,model=None, dataloader=None):
 def adversarial(args,io,model=None, dataloader=None):
 
     if dataloader == None:
-        test_loader = DataLoader(ModelNet40_SSL(partition='test', num_points=args.num_points, rotation=args.rotation, angles=args.angles, jigsaw=args.jigsaw, k=args.k1), num_workers=8,
+        test_loader = DataLoader(PCData_SSL(name=args.dataset,partition='test', num_points=args.num_points, rotation=args.rotation, angles=args.angles, jigsaw=args.jigsaw, k=args.k1), num_workers=8,
                              batch_size=args.test_batch_size, shuffle=False, drop_last=False)
     else:
         test_loader = dataloader
@@ -327,8 +327,7 @@ if __name__ == "__main__":
     parser.add_argument('--model', type=str, default='dgcnn', metavar='N',
                         choices=['pointnet_rotation', 'dgcnn_rotation', 'pointnet_jigsaw', 'dgcnn_jigsaw', 'deepsym_jigsaw', 'deepsym_rotation','pct_rotation','pct_jigsaw'],
                         help='Model to use, [pointnet, dgcnn]')
-    parser.add_argument('--dataset', type=str, default='modelnet40', metavar='N',
-                        choices=['modelnet40'])
+    parser.add_argument('--dataset', type=str, default='modelnet40', metavar='N')
     parser.add_argument('--batch_size', type=int, default=32, metavar='batch_size',
                         help='Size of batch)')
     parser.add_argument('--test_batch_size', type=int, default=32, metavar='batch_size',

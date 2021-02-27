@@ -15,7 +15,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import CosineAnnealingLR, ExponentialLR, StepLR, MultiStepLR, ReduceLROnPlateau
-from data import ModelNet40_SSL, ModelNet40, ModelNet40_Jigsaw
+from data import PCData_SSL, PCData, PCData_Jigsaw
 from model_joint import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, DGCNN_Jigsaw
 import numpy as np
 from torch.utils.data import DataLoader
@@ -54,14 +54,14 @@ def set_bn_eval(m):
 def train(args, io):
 
     if args.rotation:
-        train_loader = DataLoader(ModelNet40(partition='train', num_points=args.num_points,rotation=args.rotation,angles=args.angles), num_workers=8,
+        train_loader = DataLoader(PCData(name=args.dataset,partition='train', num_points=args.num_points,rotation=args.rotation,angles=args.angles), num_workers=8,
                                   batch_size=args.batch_size, shuffle=True, drop_last=True)
-        test_loader = DataLoader(ModelNet40(partition='test', num_points=args.num_points,rotation=args.rotation,angles=args.angles), num_workers=8,
+        test_loader = DataLoader(PCData(name=args.dataset,partition='test', num_points=args.num_points,rotation=args.rotation,angles=args.angles), num_workers=8,
                                  batch_size=args.test_batch_size, shuffle=False, drop_last=False)
     elif args.jigsaw:
-        train_loader = DataLoader(ModelNet40_Jigsaw(partition='train', num_points=args.num_points,jigsaw=args.jigsaw,k=args.k1), num_workers=8,
+        train_loader = DataLoader(PCData_Jigsaw(name=args.dataset,partition='train', num_points=args.num_points,jigsaw=args.jigsaw,k=args.k1), num_workers=8,
                                   batch_size=args.batch_size, shuffle=True, drop_last=True)
-        test_loader = DataLoader(ModelNet40_Jigsaw(partition='test', num_points=args.num_points,jigsaw=args.jigsaw,k=args.k1), num_workers=8,
+        test_loader = DataLoader(PCData_Jigsaw(name=args.dataset,partition='test', num_points=args.num_points,jigsaw=args.jigsaw,k=args.k1), num_workers=8,
                                  batch_size=args.test_batch_size, shuffle=False, drop_last=False)
     else:
         raise Exception("Not implemented")
@@ -138,7 +138,7 @@ def train(args, io):
         for data, label, aug_data, aug_label in train_loader:
             # print(rotated_data.shape)
             # print(rotation_label.shape)
-            data, label = data.to(device).float(), label.to(device).squeeze()
+            data, label = data.to(device).float(), label.to(device).long().squeeze()
             batch_size, N, C = data.size()
 
             data = data.permute(0, 2, 1)
@@ -251,10 +251,10 @@ def test(args, io,model=None, dataloader=None):
 
     if dataloader == None:
         if args.rotation:
-            test_loader = DataLoader(ModelNet40(partition='test', num_points=args.num_points,rotation=args.rotation,angles=args.angles), num_workers=8,
+            test_loader = DataLoader(PCData(name=args.dataset,partition='test', num_points=args.num_points,rotation=args.rotation,angles=args.angles), num_workers=8,
                                  batch_size=args.test_batch_size, shuffle=False, drop_last=False)
         if args.jigsaw:
-            test_loader = DataLoader(ModelNet40_Jigsaw(partition='test', num_points=args.num_points,jigsaw=args.jigsaw,k=args.k1), num_workers=8,
+            test_loader = DataLoader(PCData_Jigsaw(name=args.dataset,partition='test', num_points=args.num_points,jigsaw=args.jigsaw,k=args.k1), num_workers=8,
                                  batch_size=args.test_batch_size, shuffle=False, drop_last=False)
 
     else:
@@ -286,7 +286,7 @@ def test(args, io,model=None, dataloader=None):
     test_pred = []
     for data, label,_,_ in test_loader:
 
-        data, label = data.to(device).float(), label.to(device).squeeze()
+        data, label = data.to(device).float(), label.to(device).long().squeeze()
         data = data.permute(0, 2, 1)
         batch_size = data.size()[0]
         # print(data.shape)
@@ -310,10 +310,10 @@ def adversarial(args,io,model=None, dataloader=None):
 
     if dataloader == None:
         if args.rotation:
-            test_loader = DataLoader(ModelNet40(partition='test', num_points=args.num_points,rotation=args.rotation,angles=args.angles), num_workers=8,
+            test_loader = DataLoader(PCData(name=args.dataset,partition='test', num_points=args.num_points,rotation=args.rotation,angles=args.angles), num_workers=8,
                                  batch_size=args.test_batch_size, shuffle=False, drop_last=False)
         if args.jigsaw:
-            test_loader = DataLoader(ModelNet40_Jigsaw(partition='test', num_points=args.num_points,jigsaw=args.jigsaw,k=args.k1), num_workers=8,
+            test_loader = DataLoader(PCData_Jigsaw(name=args.dataset,partition='test', num_points=args.num_points,jigsaw=args.jigsaw,k=args.k1), num_workers=8,
                                  batch_size=args.test_batch_size, shuffle=False, drop_last=False)
 
     else:
@@ -344,7 +344,7 @@ def adversarial(args,io,model=None, dataloader=None):
     test_true = []
     test_pred = []
     for data, label,_,_ in test_loader:
-        data, label = data.to(device).float(), label.to(device).squeeze()
+        data, label = data.to(device).float(), label.to(device).long().squeeze()
         data = data.permute(0, 2, 1)
         batch_size = data.size()[0]
         adv_data = attack.pgd_attack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,repeat=1,mixup=False)
@@ -370,8 +370,7 @@ if __name__ == "__main__":
                         help='Model to use, [pointnet, dgcnn]')
     parser.add_argument('--pre_path', type=str, default='./', metavar='N',
                         help='Name of the experiment')
-    parser.add_argument('--dataset', type=str, default='modelnet40', metavar='N',
-                        choices=['modelnet40'])
+    parser.add_argument('--dataset', type=str, default='modelnet40', metavar='N')
     parser.add_argument('--batch_size', type=int, default=32, metavar='batch_size',
                         help='Size of batch)')
     parser.add_argument('--test_batch_size', type=int, default=32, metavar='batch_size',

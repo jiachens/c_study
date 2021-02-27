@@ -20,9 +20,240 @@ def download():
     if not os.path.exists(os.path.join(DATA_DIR, 'modelnet40_ply_hdf5_2048')):
         www = 'https://shapenet.cs.stanford.edu/media/modelnet40_ply_hdf5_2048.zip'
         zipfile = os.path.basename(www)
-        os.system('wget %s --no-check-certificate; unzip %s' % (www, zipfile))
+        os.system('wget %s --no-check-certificate; unzip -qq %s' % (www, zipfile))
         os.system('mv %s %s' % (zipfile[:-4], DATA_DIR))
         os.system('rm %s' % (zipfile))
+
+    # if not os.path.exists(os.path.join(DATA_DIR, 'modelnet40_ply_hdf5_2048')):
+    #     www = 'http://3dvision.princeton.edu/projects/2014/3DShapeNets/ModelNet10.zip'
+    #     zipfile = os.path.basename(www)
+    #     os.system('wget %s --no-check-certificate; unzip %s -q' % (www, zipfile))
+    #     os.system('mv %s %s' % (zipfile[:-4], DATA_DIR))
+    #     os.system('rm %s' % (zipfile))
+    if not os.path.exists(os.path.join(DATA_DIR, 'PointDA_data')):
+        os.system('python gdrivedl.py https://drive.google.com/file/d/1-LfJWL5geF9h0Z2QpdTL0n4lShy8wy2J/view\\?usp\\=sharing -P ./data -q')
+        os.system('unzip -qq ./data/PointDA_data.zip')
+
+    if not os.path.exists(os.path.join(DATA_DIR, 'ScanObjectNN')):
+        os.system('mkdir ./data/ScanObjectNN')
+        os.system('wget --no-check-certificate \'https://docs.google.com/uc?export=download&id=1ZeqaYNp6wWL_xKvuZ5onZbChlI9UZYva\' -O train.h5')
+        os.system('mv train.h5 ./data/ScanObjectNN/')
+        os.system('wget --no-check-certificate \'https://docs.google.com/uc?export=download&id=14zIWTP0jq911TqlT4nfkxLlFLW-mCnoh\' -O test.h5')
+        os.system('mv test.h5 ./data/ScanObjectNN/')
+
+
+def parse_dataset_modelnet10(partition,num_points=1024):
+
+    # DATA_DIR = tf.keras.utils.get_file(
+    #     "modelnet.zip",
+    #     "http://3dvision.princeton.edu/projects/2014/3DShapeNets/ModelNet10.zip",
+    #     extract=True,
+    #     cache_dir=
+    # )
+    # DATA_DIR = os.path.join(os.path.dirname(DATA_DIR), "ModelNet10")
+    DATA_DIR = './data/PointDA_data/modelnet'
+
+    train_points = []
+    train_labels = []
+    test_points = []
+    test_labels = []
+    class_map = {}
+    folders = glob.glob(os.path.join(DATA_DIR, "[!README]*"))
+
+    index = np.random.choice(2048, 1024, replace=False)
+
+    for i, folder in enumerate(folders):
+        print("processing class: {}".format(os.path.basename(folder)))
+        # store folder name with ID so we can retrieve later
+        class_map[i] = folder.split("/")[-1]
+        # gather all files
+        if partition == 'train':
+            train_files = glob.glob(os.path.join(folder, "train/*"))
+        elif partition == 'test':
+            test_files = glob.glob(os.path.join(folder, "test/*"))
+        if partition == 'train':
+            for f in train_files:
+                raw = np.load(f)[index,:]
+                mean_x, mean_y, mean_z = np.mean(raw[:,0]), np.mean(raw[:,1]), np.mean(raw[:,2])
+                raw[:,0] -= mean_x
+                raw[:,1] -= mean_y
+                raw[:,2] -= mean_z
+                leng_x, leng_y, leng_z = np.max(raw[:,0]) - np.min(raw[:,0]), np.max(raw[:,1]) - np.min(raw[:,1]), np.max(raw[:,2]) - np.min(raw[:,2])
+                if leng_x >= leng_y and leng_x >= leng_z:
+                    ratio = 2.0 / leng_x
+                elif leng_y >= leng_x and leng_y >= leng_z:
+                    ratio = 2.0 / leng_y
+                else:
+                    ratio = 2.0 / leng_z
+
+                raw *= ratio
+
+                train_points.append(raw)
+                train_labels.append(i)
+
+
+        elif partition == 'test':
+            for f in test_files:
+                raw = np.load(f)[index,:]
+                mean_x, mean_y, mean_z = np.mean(raw[:,0]), np.mean(raw[:,1]), np.mean(raw[:,2])
+                raw[:,0] -= mean_x
+                raw[:,1] -= mean_y
+                raw[:,2] -= mean_z
+                leng_x, leng_y, leng_z = np.max(raw[:,0]) - np.min(raw[:,0]), np.max(raw[:,1]) - np.min(raw[:,1]), np.max(raw[:,2]) - np.min(raw[:,2])
+                if leng_x >= leng_y and leng_x >= leng_z:
+                    ratio = 2.0 / leng_x
+                elif leng_y >= leng_x and leng_y >= leng_z:
+                    ratio = 2.0 / leng_y
+                else:
+                    ratio = 2.0 / leng_z
+
+                raw *= ratio
+
+                test_points.append(raw)
+                test_labels.append(i)
+
+    if partition == 'train':
+        return np.array(train_points), np.array(train_labels)
+    elif partition == 'test':
+        return np.array(test_points), np.array(test_labels)
+
+    # np.save('./data/ModelNet10/train_points.npy',np.array(train_points))
+    # np.save('./data/ModelNet10/test_points.npy',np.array(test_points))
+    # np.save('./data/ModelNet10/train_labels.npy',np.array(train_labels))
+    # np.save('./data/ModelNet10/test_labels.npy',np.array(test_labels))
+
+def parse_dataset_shapenet10(partition,num_points=1024):
+
+    DATA_DIR = './data/PointDA_data/shapenet'
+
+    train_points = []
+    train_labels = []
+    test_points = []
+    test_labels = []
+    class_map = {}
+    folders = glob.glob(os.path.join(DATA_DIR, "[!README]*"))
+
+    index = np.random.choice(2048, 1024, replace=False)
+
+    for i, folder in enumerate(folders):
+        print("processing class: {}".format(os.path.basename(folder)))
+        # store folder name with ID so we can retrieve later
+        class_map[i] = folder.split("/")[-1]
+        # gather all files
+        if partition == 'train':
+            train_files = glob.glob(os.path.join(folder, "train/*"))
+        elif partition == 'test':
+            test_files = glob.glob(os.path.join(folder, "test/*"))
+        if partition == 'train':
+            for f in train_files:
+                raw = np.load(f)[index,:]
+                mean_x, mean_y, mean_z = np.mean(raw[:,0]), np.mean(raw[:,1]), np.mean(raw[:,2])
+                raw[:,0] -= mean_x
+                raw[:,1] -= mean_y
+                raw[:,2] -= mean_z
+                leng_x, leng_y, leng_z = np.max(raw[:,0]) - np.min(raw[:,0]), np.max(raw[:,1]) - np.min(raw[:,1]), np.max(raw[:,2]) - np.min(raw[:,2])
+                if leng_x >= leng_y and leng_x >= leng_z:
+                    ratio = 2.0 / leng_x
+                elif leng_y >= leng_x and leng_y >= leng_z:
+                    ratio = 2.0 / leng_y
+                else:
+                    ratio = 2.0 / leng_z
+
+                raw *= ratio
+
+                train_points.append(raw)
+                train_labels.append(i)
+            return np.array(train_points), np.array(train_labels)
+
+        elif partition == 'test':
+            for f in test_files:
+                raw = np.load(f)[index,:]
+                mean_x, mean_y, mean_z = np.mean(raw[:,0]), np.mean(raw[:,1]), np.mean(raw[:,2])
+                raw[:,0] -= mean_x
+                raw[:,1] -= mean_y
+                raw[:,2] -= mean_z
+                leng_x, leng_y, leng_z = np.max(raw[:,0]) - np.min(raw[:,0]), np.max(raw[:,1]) - np.min(raw[:,1]), np.max(raw[:,2]) - np.min(raw[:,2])
+                if leng_x >= leng_y and leng_x >= leng_z:
+                    ratio = 2.0 / leng_x
+                elif leng_y >= leng_x and leng_y >= leng_z:
+                    ratio = 2.0 / leng_y
+                else:
+                    ratio = 2.0 / leng_z
+
+                raw *= ratio
+
+                test_points.append(raw)
+                test_labels.append(i)
+            return np.array(test_points), np.array(test_labels)
+
+    # np.save('./data/ModelNet10/train_points.npy',np.array(train_points))
+    # np.save('./data/ModelNet10/test_points.npy',np.array(test_points))
+    # np.save('./data/ModelNet10/train_labels.npy',np.array(train_labels))
+    # np.save('./data/ModelNet10/test_labels.npy',np.array(test_labels))
+
+
+def parse_dataset_scanobject(partition,num_points=1024):
+
+    # DATA_DIR = tf.keras.utils.get_file(
+    #     "modelnet.zip",
+    #     "http://3dvision.princeton.edu/projects/2014/3DShapeNets/ModelNet10.zip",
+    #     extract=True,
+    #     cache_dir=
+    # )
+    # DATA_DIR = os.path.join(os.path.dirname(DATA_DIR), "ModelNet10")
+    DATA_DIR = './data/ScanObjectNN'
+
+
+    index = np.random.choice(2048, 1024, replace=False)
+
+    if partition == 'train':
+
+        f = h5py.File(os.path.join(DATA_DIR, "train.h5"))
+        train_data = f['data'][:][:,index,:]
+        for i in range(train_data.shape[0]):
+            mean_x, mean_y, mean_z = np.mean(train_data[i,:,0]), np.mean(train_data[i,:,1]), np.mean(train_data[i,:,2])
+            train_data[i,:,0] -= mean_x
+            train_data[i,:,1] -= mean_y
+            train_data[i,:,2] -= mean_z
+            leng_x, leng_y, leng_z = np.max(train_data[i,:,0]) - np.min(train_data[i,:,0]), np.max(train_data[i,:,1]) - np.min(train_data[i,:,1]), np.max(train_data[i,:,2]) - np.min(train_data[i,:,2])
+            if leng_x >= leng_y and leng_x >= leng_z:
+                ratio = 2.0 / leng_x
+            elif leng_y >= leng_x and leng_y >= leng_z:
+                ratio = 2.0 / leng_y
+            else:
+                ratio = 2.0 / leng_z
+
+            train_data[i,:,:] *= ratio
+
+        train_label = f['label'][:]
+        return np.array(train_data), np.array(train_label)
+
+    elif partition == 'test':
+
+        f = h5py.File(os.path.join(DATA_DIR, "test.h5"))
+        test_data = f['data'][:][:,index,:]
+        for i in range(test_data.shape[0]):
+            mean_x, mean_y, mean_z = np.mean(test_data[i,:,0]), np.mean(test_data[i,:,1]), np.mean(test_data[i,:,2])
+            test_data[i,:,0] -= mean_x
+            test_data[i,:,1] -= mean_y
+            test_data[i,:,2] -= mean_z
+            leng_x, leng_y, leng_z = np.max(test_data[i,:,0]) - np.min(test_data[i,:,0]), np.max(test_data[i,:,1]) - np.min(test_data[i,:,1]), np.max(test_data[i,:,2]) - np.min(test_data[i,:,2])
+            if leng_x >= leng_y and leng_x >= leng_z:
+                ratio = 2.0 / leng_x
+            elif leng_y >= leng_x and leng_y >= leng_z:
+                ratio = 2.0 / leng_y
+            else:
+                ratio = 2.0 / leng_z
+
+            test_data[i,:,:] *= ratio
+        
+        test_label = f['label'][:]
+        return np.array(test_data), np.array(test_label)
+
+    # np.save('./data/ScanObjectNN/train_points.npy',np.array(train_data))
+    # np.save('./data/ScanObjectNN/test_points.npy',np.array(test_data))
+    # np.save('./data/ScanObjectNN/train_labels.npy',np.array(train_label))
+    # np.save('./data/ScanObjectNN/test_labels.npy',np.array(test_label))
 
 def shuffle_data(data, labels):
     """ Shuffle data and labels.
@@ -145,9 +376,18 @@ def rotate_point_cloud_by_angle_xyz(data, angle_x=0, angle_y=0, angle_z=0):
     
     return rotated_data.reshape(data.shape)
 
-class ModelNet40(Dataset):
-    def __init__(self, num_points, partition='train', translate = False, jitter=True, rotation=False, angles=6):
-        self.data, self.label = load_data(partition)
+class PCData(Dataset):
+    def __init__(self, num_points, name='modelnet40' ,partition='train', translate = False, jitter=True, rotation=False, angles=6):
+        
+        if name == 'modelnet40':
+            self.data, self.label = load_data(partition)
+        elif name == 'modelnet10':
+            self.data, self.label = parse_dataset_modelnet10(partition)
+        elif name == 'shapenet10':
+            self.data, self.label = parse_dataset_shapenet10(partition)
+        elif name == 'scanobjectnn':
+            self.data, self.label = parse_dataset_scanobject(partition)
+
         self.num_points = num_points
         self.partition = partition
         self.rotation = rotation
@@ -224,9 +464,16 @@ def generate_jigsaw_data_label(pointcloud, k):
     return jigsaw_pointcloud, label
 
 
-class ModelNet40_SSL(Dataset):
-    def __init__(self, num_points, partition='train', rotation=False, angles=6, jigsaw=False, k=2):
-        self.data, self.label = load_data(partition)
+class PCData_SSL(Dataset):
+    def __init__(self, num_points, name='modelnet40', partition='train', rotation=False, angles=6, jigsaw=False, k=2):
+        if name == 'modelnet40':
+            self.data, self.label = load_data(partition)
+        elif name == 'modelnet10':
+            self.data, self.label = parse_dataset_modelnet10(partition)
+        elif name == 'shapenet10':
+            self.data, self.label = parse_dataset_shapenet10(partition)
+        elif name == 'scanobjectnn':
+            self.data, self.label = parse_dataset_scanobject(partition)
         self.num_points = num_points
         self.partition = partition
         self.jigsaw = jigsaw
@@ -267,9 +514,17 @@ class ModelNet40_SSL(Dataset):
     def __len__(self):
         return self.data.shape[0]
 
-class ModelNet40_Jigsaw(Dataset):
-    def __init__(self, num_points, partition='train', jigsaw=False, k=2):
-        self.data, self.label = load_data(partition)
+class PCData_Jigsaw(Dataset):
+    def __init__(self, num_points, name='modelnet40', partition='train', jigsaw=False, k=2):
+        
+        if name == 'modelnet40':
+            self.data, self.label = load_data(partition)
+        elif name == 'modelnet10':
+            self.data, self.label = parse_dataset_modelnet10(partition)
+        elif name == 'shapenet10':
+            self.data, self.label = parse_dataset_shapenet10(partition)
+        elif name == 'scanobjectnn':
+            self.data, self.label = parse_dataset_scanobject(partition)
         self.num_points = num_points
         self.partition = partition
         self.jigsaw = jigsaw
@@ -299,8 +554,9 @@ class ModelNet40_Jigsaw(Dataset):
 
 
 if __name__ == '__main__':
-    train = ModelNet40(1024)
-    test = ModelNet40(1024, 'test')
-    for data, label in train:
-        print(data.shape)
-        print(label.shape)
+    download()
+    # train = ModelNet40(1024)
+    # test = ModelNet40(1024, 'test')
+    # for data, label in train:
+    #     print(data.shape)
+    #     print(label.shape)
