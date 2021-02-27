@@ -11,6 +11,20 @@ torch.cuda.manual_seed_all(666)
 torch.backends.cudnn.deterministic=True
 torch.backends.cudnn.benchmark = False
 
+sys.path.append('./latent_3d_points_py3/')
+from latent_3d_points_py3.src import in_out
+from latent_3d_points_py3.src.general_utils import plot_3d_point_cloud
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(BASE_DIR)
+
+# Download dataset for point cloud classification
+DATA_DIR = os.path.join(BASE_DIR, 'data')
+SHAPENET_DIR = './data/shape_net_core_uniform_samples_2048/'
+scratch_shapenet_dir = '/scratch/shape_net_core_uniform_samples_2048'
+if os.path.exists(scratch_shapenet_dir):
+    SHAPENET_DIR = scratch_shapenet_dir
+    print(f'Loading shapenet from {SHAPENET_DIR}')
 
 def download():
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
