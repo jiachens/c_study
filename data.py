@@ -43,7 +43,7 @@ def download():
 
 
 def parse_dataset_modelnet10(partition,num_points=1024):
-
+    download()
     # DATA_DIR = tf.keras.utils.get_file(
     #     "modelnet.zip",
     #     "http://3dvision.princeton.edu/projects/2014/3DShapeNets/ModelNet10.zip",
@@ -123,7 +123,7 @@ def parse_dataset_modelnet10(partition,num_points=1024):
     # np.save('./data/ModelNet10/test_labels.npy',np.array(test_labels))
 
 def parse_dataset_shapenet10(partition,num_points=1024):
-
+    download()
     DATA_DIR = './data/PointDA_data/shapenet'
 
     train_points = []
@@ -193,7 +193,7 @@ def parse_dataset_shapenet10(partition,num_points=1024):
 
 
 def parse_dataset_scanobject(partition,num_points=1024):
-
+    download()
     # DATA_DIR = tf.keras.utils.get_file(
     #     "modelnet.zip",
     #     "http://3dvision.princeton.edu/projects/2014/3DShapeNets/ModelNet10.zip",
