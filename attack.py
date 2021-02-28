@@ -23,7 +23,7 @@ def ATTA_attack(model,data,labels,natural_data,eps=0.01,alpha=0.001,iters=1):
             delta = torch.clamp(delta,-eps,eps)
             adv_data = natural_data+delta
             #If points outside the unit cube are invalid then
-            adv_data = torch.clamp(adv_data,-1,1)
+            # adv_data = torch.clamp(adv_data,-1,1)
     return adv_data.cuda()
  
 def pgd_attack(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=False):

@@ -94,7 +94,16 @@ def train(args, io):
         opt = optim.Adam(model.parameters(), lr=args.lr)
 
     
-    scheduler = StepLR(opt, 20, 0.7)
+    if args.scheduler == 'default':
+        scheduler = StepLR(opt, 20, 0.7)
+    elif args.scheduler == 'plateau':
+        scheduler = ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=5)
+    elif args.scheduler == 'cosine':
+        scheduler = CosineAnnealingLR(opt, args.epochs, eta_min=0.00001)
+    elif args.scheduler == 'piecewise':
+        scheduler = MultiStepLR(opt, milestones=[100,150,200], gamma=0.1)
+    elif args.scheduler == 'pct':
+        scheduler = CosineAnnealingLR(opt, args.epochs, eta_min=args.lr)
 
     criterion = cal_loss
 
@@ -378,6 +387,8 @@ if __name__ == "__main__":
                         help="How many angles in rotation based ssl")
     parser.add_argument('--k1', type=int, default=2, metavar='N',
                         help='Hyper-parameter k1')
+    parser.add_argument('--scheduler',type=str,default='default',
+                        help="Which lr scheduler to use")
     args = parser.parse_args()
 
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
