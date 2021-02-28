@@ -87,12 +87,20 @@ def train(args, io):
     else:
         raise Exception("Not implemented")
 
+    for name,m in model.named_modules():
+        if name == 'stn.fc3':
+            nn.init.uniform_(m.weight, a=-0.1,b=0.1)
+
     if args.p != '':  
         saved_model = torch.load(args.p)
         model_dict =  model.state_dict()
-        state_dict = {k[7:]:v for k,v in saved_model.items() if k[7:] in model_dict.keys()} # module.
+        if args.jigsaw:
+            state_dict = {k[7:]:v for k,v in saved_model.items() if (k[7:] in model_dict.keys() and not k[7:].startswith('stn') and not k[7:].startswith('fstn'))} # module.
+        else:
+            state_dict = {k[7:]:v for k,v in saved_model.items() if (k[7:] in model_dict.keys())} # module.
         model_dict.update(state_dict)
         model.load_state_dict(model_dict)
+
 
     print(str(model))
 
