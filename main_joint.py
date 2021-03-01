@@ -16,7 +16,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import CosineAnnealingLR, ExponentialLR, StepLR, MultiStepLR, ReduceLROnPlateau
 from data import PCData_SSL, PCData, PCData_Jigsaw
-from model_joint import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, DGCNN_Jigsaw
+from model_joint import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, DGCNN_Jigsaw, Pct_Rotation, Pct_Jigsaw
 import numpy as np
 from torch.utils.data import DataLoader
 import sys
@@ -79,6 +79,11 @@ def train(args, io):
             model = DGCNN_Rotation(args).to(device)
         elif args.jigsaw:
             model = DGCNN_Jigsaw(args).to(device)
+    elif args.model == 'pct':
+        if args.rotation:
+            model = Pct_Rotation(args).to(device)
+        elif args.jigsaw:
+            model = Pct_Jigsaw(args).to(device)
             #saved_model.load_state_dict(torch.load(args.p))
     else:
         raise Exception("Not implemented")
@@ -109,6 +114,8 @@ def train(args, io):
         scheduler = CosineAnnealingLR(opt, args.epochs, eta_min=0.00001)
     elif args.scheduler == 'piecewise':
         scheduler = MultiStepLR(opt, milestones=[100,150,200], gamma=0.1)
+    elif args.scheduler == 'pct':
+        scheduler = CosineAnnealingLR(opt, args.epochs, eta_min=args.lr)
 
     criterion = cal_loss
 
@@ -274,6 +281,11 @@ def test(args, io,model=None, dataloader=None):
                 model = DGCNN_Rotation(args).to(device)
             elif args.jigsaw:
                 model = DGCNN_Jigsaw(args).to(device)
+        elif args.model == 'pct':
+            if args.rotation:
+                model = Pct_Rotation(args).to(device)
+            elif args.jigsaw:
+                model = Pct_Jigsaw(args).to(device)
                 #saved_model.load_state_dict(torch.load(args.p))
         else:
             raise Exception("Not implemented")
@@ -333,6 +345,11 @@ def adversarial(args,io,model=None, dataloader=None):
                 model = DGCNN_Rotation(args).to(device)
             elif args.jigsaw:
                 model = DGCNN_Jigsaw(args).to(device)
+        elif args.model == 'pct':
+            if args.rotation:
+                model = Pct_Rotation(args).to(device)
+            elif args.jigsaw:
+                model = Pct_Jigsaw(args).to(device)
                 #saved_model.load_state_dict(torch.load(args.p))
         else:
             raise Exception("Not implemented")
@@ -366,7 +383,7 @@ if __name__ == "__main__":
     parser.add_argument('--exp_name', type=str, default='exp', metavar='N',
                         help='Name of the experiment')
     parser.add_argument('--model', type=str, default='dgcnn', metavar='N',
-                        choices=['pointnet', 'dgcnn'],
+                        choices=['pointnet', 'dgcnn', 'pct'],
                         help='Model to use, [pointnet, dgcnn]')
     parser.add_argument('--pre_path', type=str, default='./', metavar='N',
                         help='Name of the experiment')

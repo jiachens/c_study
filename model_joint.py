@@ -12,6 +12,7 @@ torch.backends.cudnn.benchmark = False
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
+from util import sample_and_group 
 
 class Dual_BN(nn.Module):
     def __init__(self, num_channels,eps=1e-3):
@@ -202,6 +203,228 @@ class MAXPOOL(nn.Module):
     def forward(self,x):
         return x.max(dim=-1, keepdim=False)[0]
 
+
+
+class Local_op(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(Local_op, self).__init__()
+        self.conv1 = nn.Conv1d(in_channels, out_channels, kernel_size=1, bias=False)
+        self.conv2 = nn.Conv1d(out_channels, out_channels, kernel_size=1, bias=False)
+        self.bn1 = Dual_BN(out_channels)
+        self.bn2 = Dual_BN(out_channels)
+
+    def forward(self, x, flag):
+        b, n, s, d = x.size()  # torch.Size([32, 512, 32, 6]) 
+        x = x.permute(0, 1, 3, 2)   
+        x = x.reshape(-1, d, s) 
+        batch_size, _, N = x.size()
+        x = F.relu(self.bn1(self.conv1(x),flag)) # B, D, N
+        x = F.relu(self.bn2(self.conv2(x),flag)) # B, D, N
+        x = F.adaptive_max_pool1d(x, 1).view(batch_size, -1)
+        x = x.reshape(b, n, -1).permute(0, 2, 1)
+        return x
+
+class Pct_Rotation(nn.Module):
+    def __init__(self, args, output_channels=40):
+        super(Pct_Rotation, self).__init__()
+        self.args = args
+        self.conv1 = nn.Conv1d(3, 64, kernel_size=1, bias=False)
+        self.conv2 = nn.Conv1d(64, 64, kernel_size=1, bias=False)
+        self.bn1 = Dual_BN(64)
+        self.bn2 = Dual_BN(64)
+        self.gather_local_0 = Local_op(in_channels=128, out_channels=128)
+        self.gather_local_1 = Local_op(in_channels=256, out_channels=256)
+
+        self.pt_last = Point_Transformer_Last(args)
+
+        self.conv_fuse = nn.Conv1d(1280, 1024, kernel_size=1, bias=False)
+        self.bn3 = Dual_BN(1024)
+
+        self.linear1 = nn.Linear(1024, 512, bias=False)
+        self.bn6 = Dual_BN(512)
+        self.dp1 = nn.Dropout(p=args.dropout)
+        self.linear2 = nn.Linear(512, 256)
+        self.bn7 = Dual_BN(256)
+        self.dp2 = nn.Dropout(p=args.dropout)
+
+        self.linear101 = nn.Linear(256, output_channels)
+        self.linear100 = nn.Linear(256, args.angles)
+
+    def forward(self, x,  rotation=False):
+        xyz = x.permute(0, 2, 1)
+        batch_size, _, _ = x.size()
+        # B, D, N
+        x = F.relu(self.bn1(self.conv1(x),rotation))
+        # B, D, N
+        x = F.relu(self.bn2(self.conv2(x),rotation))
+        x = x.permute(0, 2, 1)
+        new_xyz, new_feature = sample_and_group(npoint=512, radius=0.15, nsample=32, xyz=xyz, points=x)         
+        feature_0 = self.gather_local_0(new_feature,rotation)
+        feature = feature_0.permute(0, 2, 1)
+        new_xyz, new_feature = sample_and_group(npoint=256, radius=0.2, nsample=32, xyz=new_xyz, points=feature) 
+        feature_1 = self.gather_local_1(new_feature,rotation)
+
+        x = self.pt_last(feature_1,rotation)
+        x = torch.cat([x, feature_1], dim=1)
+        x = self.conv_fuse(x)
+        x = F.leaky_relu(self.bn3(x,rotation), negative_slope=0.2)
+        x = F.adaptive_max_pool1d(x, 1).view(batch_size, -1)
+        x = F.leaky_relu(self.bn6(self.linear1(x),rotation), negative_slope=0.2)
+        x = self.dp1(x)
+        x = F.leaky_relu(self.bn7(self.linear2(x),rotation), negative_slope=0.2)
+        x = self.dp2(x)
+
+        if rotation:
+            x = self.linear100(x)
+        else:
+            x = self.linear101(x)
+
+        return x, None, None
+
+class Pct_Jigsaw(nn.Module):
+    def __init__(self, args, output_channels=40):
+        super(Pct_Jigsaw, self).__init__()
+        self.args = args
+        self.k = args.k1**3
+        self.conv1 = nn.Conv1d(3, 64, kernel_size=1, bias=False)
+        self.conv2 = nn.Conv1d(64, 64, kernel_size=1, bias=False)
+        self.bn1 = Dual_BN(64)
+        self.bn2 = Dual_BN(64)
+        self.gather_local_0 = Local_op(in_channels=128, out_channels=128)
+        self.gather_local_1 = Local_op(in_channels=256, out_channels=256)
+
+        self.pt_last = Point_Transformer_Last(args)
+
+        self.conv_fuse = nn.Conv1d(1280, 1024, kernel_size=1, bias=False)
+        self.bn3 = Dual_BN(1024)
+
+        self.linear1 = nn.Linear(1024, 512, bias=False)
+        self.bn6 = Dual_BN(512)
+        self.dp1 = nn.Dropout(p=args.dropout)
+        self.linear2 = nn.Linear(512, 256)
+        self.bn7 = Dual_BN(256)
+        self.dp2 = nn.Dropout(p=args.dropout)
+        self.linear100 = nn.Linear(256, output_channels)
+
+        self.conv6 = nn.Conv1d(64 + 1024, 512, 1, bias=False)
+        self.conv7 = nn.Conv1d(512, 256, 1, bias=False)
+        self.conv8 = nn.Conv1d(256, 128, 1, bias=False)
+        self.conv9 = nn.Conv1d(128, self.k, 1, bias=False)
+        self.bn101 = Dual_BN(512,eps=1e-03)
+        self.bn102 = Dual_BN(256,eps=1e-03)
+        self.bn103 = Dual_BN(128,eps=1e-03)
+
+    def forward(self, x, jigsaw=False):
+        xyz = x.permute(0, 2, 1)
+        batch_size, _, _ = x.size()
+        # B, D, N
+        x = F.relu(self.bn1(self.conv1(x),jigsaw))
+        # B, D, N
+        x = F.relu(self.bn2(self.conv2(x),jigsaw))
+        pointfeat = x
+        x = x.permute(0, 2, 1)
+        new_xyz, new_feature = sample_and_group(npoint=512, radius=0.15, nsample=32, xyz=xyz, points=x)         
+        feature_0 = self.gather_local_0(new_feature,jigsaw)
+        feature = feature_0.permute(0, 2, 1)
+        new_xyz, new_feature = sample_and_group(npoint=256, radius=0.2, nsample=32, xyz=new_xyz, points=feature) 
+        feature_1 = self.gather_local_1(new_feature,jigsaw)
+
+        x = self.pt_last(feature_1,jigsaw)
+        x = torch.cat([x, feature_1], dim=1)
+        x = self.conv_fuse(x)
+        x = F.leaky_relu(self.bn3(x,jigsaw), negative_slope=0.2)
+        x = F.adaptive_max_pool1d(x, 1).view(batch_size, -1)
+
+        # x = F.leaky_relu(self.bn6(self.linear1(x)), negative_slope=0.2)
+        # x = self.dp1(x)
+        # x = F.leaky_relu(self.bn7(self.linear2(x)), negative_slope=0.2)
+        # x = self.dp2(x)
+        # x = self.linear100(x)
+        if jigsaw:
+            x = x.view(-1, 1024, 1).repeat(1, 1, self.args.num_points)
+            # print(x.shape,feature_1.shape)
+            x = torch.cat([x, pointfeat], 1)
+            x = F.relu(self.bn101(self.conv6(x),jigsaw))
+            x = F.relu(self.bn102(self.conv7(x),jigsaw))
+            x = F.relu(self.bn103(self.conv8(x),jigsaw))
+            x = self.conv9(x)
+            x = x.transpose(2,1).contiguous()
+            x = F.log_softmax(x.view(-1,self.k), dim=-1)
+            x = x.view(batch_size, self.args.num_points, self.k)
+        else:
+            x = F.leaky_relu(self.bn6(self.linear1(x),jigsaw), negative_slope=0.2)
+            x = self.dp1(x)
+            x = F.leaky_relu(self.bn7(self.linear2(x),jigsaw), negative_slope=0.2)
+            x = self.dp2(x)
+            x = self.linear100(x)
+
+        return x, None, None
+
+
+class Point_Transformer_Last(nn.Module):
+    def __init__(self, args, channels=256):
+        super(Point_Transformer_Last, self).__init__()
+        self.args = args
+        self.conv1 = nn.Conv1d(channels, channels, kernel_size=1, bias=False)
+        self.conv2 = nn.Conv1d(channels, channels, kernel_size=1, bias=False)
+
+        self.bn1 = Dual_BN(channels)
+        self.bn2 = Dual_BN(channels)
+
+        self.sa1 = SA_Layer(channels)
+        self.sa2 = SA_Layer(channels)
+        self.sa3 = SA_Layer(channels)
+        self.sa4 = SA_Layer(channels)
+
+    def forward(self, x, flag):
+        # 
+        # b, 3, npoint, nsample  
+        # conv2d 3 -> 128 channels 1, 1
+        # b * npoint, c, nsample 
+        # permute reshape
+        batch_size, _, N = x.size()
+
+        # B, D, N
+        x = F.relu(self.bn1(self.conv1(x),flag))
+        x = F.relu(self.bn2(self.conv2(x),flag))
+        x1 = self.sa1(x,flag)
+        x2 = self.sa2(x1,flag)
+        x3 = self.sa3(x2,flag)
+        x4 = self.sa4(x3,flag)
+        x = torch.cat((x1, x2, x3, x4), dim=1)
+
+        return x
+
+class SA_Layer(nn.Module):
+    def __init__(self, channels):
+        super(SA_Layer, self).__init__()
+        self.q_conv = nn.Conv1d(channels, channels // 4, 1, bias=False)
+        self.k_conv = nn.Conv1d(channels, channels // 4, 1, bias=False)
+        self.q_conv.weight = self.k_conv.weight
+        self.q_conv.bias = self.k_conv.bias
+
+        self.v_conv = nn.Conv1d(channels, channels, 1)
+        self.trans_conv = nn.Conv1d(channels, channels, 1)
+        self.after_norm = Dual_BN(channels)
+        self.act = nn.ReLU()
+        self.softmax = nn.Softmax(dim=-1)
+
+    def forward(self, x, flag):
+        # b, n, c
+        x_q = self.q_conv(x).permute(0, 2, 1)
+        # b, c, n
+        x_k = self.k_conv(x)
+        x_v = self.v_conv(x)
+        # b, n, n
+        energy = torch.bmm(x_q, x_k)
+
+        attention = self.softmax(energy)
+        attention = attention / (1e-9 + attention.sum(dim=1, keepdim=True))
+        # b, c, n
+        x_r = torch.bmm(x_v, attention)
+        x_r = self.act(self.after_norm(self.trans_conv(x - x_r),flag))
+        x = x + x_r
+        return x
 
 class PointNet_Rotation(nn.Module):
     def __init__(self, args, output_channels=40):
