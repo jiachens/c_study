@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-@Author: Yue Wang
-@Contact: yuewangx@mit.edu
-@File: util
-@Time: 4/5/19 3:47 PM
-"""
+'''
+Description: 
+Autor: Jiachen Sun
+Date: 2021-01-18 23:21:07
+LastEditors: Jiachen Sun
+LastEditTime: 2021-03-01 14:33:28
+'''
 
 
 import numpy as np

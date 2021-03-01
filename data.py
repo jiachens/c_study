@@ -1,3 +1,11 @@
+'''
+Description: 
+Autor: Jiachen Sun
+Date: 2021-01-18 23:21:07
+LastEditors: Jiachen Sun
+LastEditTime: 2021-03-01 15:17:25
+'''
+
 import os
 import sys
 import glob
@@ -11,32 +19,64 @@ torch.cuda.manual_seed_all(666)
 torch.backends.cudnn.deterministic=True
 torch.backends.cudnn.benchmark = False
 
-# sys.path.append('./latent_3d_points_py3/')
-# from latent_3d_points_py3.src import in_out
-# from latent_3d_points_py3.src.general_utils import plot_3d_point_cloud
+sys.path.append('./latent_3d_points_py3/')
+from latent_3d_points_py3.src import in_out
+from latent_3d_points_py3.src.general_utils import plot_3d_point_cloud
+import tqdm
+from sklearn.model_selection import train_test_split
 
 # BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # sys.path.append(BASE_DIR)
 
-# # Download dataset for point cloud classification
+# Download dataset for point cloud classification
 # DATA_DIR = os.path.join(BASE_DIR, 'data')
-# SHAPENET_DIR = './data/shape_net_core_uniform_samples_2048/'
-# scratch_shapenet_dir = '/scratch/shape_net_core_uniform_samples_2048'
-# if os.path.exists(scratch_shapenet_dir):
-#     SHAPENET_DIR = scratch_shapenet_dir
-#     print(f'Loading shapenet from {SHAPENET_DIR}')
+SHAPENET_DIR = './data/shape_net_core_uniform_samples_2048/'
 
-def download():
+# def get_shapenet_data():
+#     download()
+#     labels_lst = list(in_out.snc_category_to_synth_id().keys())
+#     data = []
+#     labels = []
+#     for label in tqdm.tqdm(labels_lst, desc='loading data'):
+#         syn_id = in_out.snc_category_to_synth_id()[label]
+#         class_dir = os.path.join(SHAPENET_DIR , syn_id)
+#         pc = in_out.load_all_point_clouds_under_folder(class_dir, n_threads=8, file_ending='*.ply', verbose=False)
+#         cur_data, _, _ = pc.full_epoch_data(shuffle=False)
+#         data.append(cur_data)
+#         labels.append([labels_lst.index(label)] * cur_data.shape[0])
+#     current_data = np.concatenate(data, axis=0)
+#     current_label = np.concatenate(labels, axis=0)
+#     print(current_data.shape)
+#     print(current_label.shape)
+    
+#     current_data, current_label = shuffle_data(current_data, np.squeeze(current_label))            
+#     current_label = np.squeeze(current_label)
+#     index = np.random.choice(2048, 1024, replace=False)
+
+#     x_train, x_test, y_train, y_test = train_test_split(current_data[:,index,:], current_label, test_size=0.2, random_state=666, shuffle=True)
+
+#     x_train *= 2
+#     x_test *= 2
+
+#     np.save('./data/shape_net_core_uniform_samples_2048/train_points.npy',x_train)
+#     np.save('./data/shape_net_core_uniform_samples_2048/test_points.npy',x_test)
+#     np.save('./data/shape_net_core_uniform_samples_2048/train_labels.npy',y_train)
+#     np.save('./data/shape_net_core_uniform_samples_2048/test_labels.npy',y_test)
+
+    
+
+def download(dataset='modelnet40'):
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     DATA_DIR = os.path.join(BASE_DIR, 'data')
     if not os.path.exists(DATA_DIR):
         os.mkdir(DATA_DIR)
-    if not os.path.exists(os.path.join(DATA_DIR, 'modelnet40_ply_hdf5_2048')):
-        www = 'https://shapenet.cs.stanford.edu/media/modelnet40_ply_hdf5_2048.zip'
-        zipfile = os.path.basename(www)
-        os.system('wget %s --no-check-certificate; unzip -qq %s' % (www, zipfile))
-        os.system('mv %s %s' % (zipfile[:-4], DATA_DIR))
-        os.system('rm %s' % (zipfile))
+    if dataset == 'modelnet40':
+        if not os.path.exists(os.path.join(DATA_DIR, 'modelnet40_ply_hdf5_2048')):
+            www = 'https://shapenet.cs.stanford.edu/media/modelnet40_ply_hdf5_2048.zip'
+            zipfile = os.path.basename(www)
+            os.system('wget %s --no-check-certificate; unzip -qq %s' % (www, zipfile))
+            os.system('mv %s %s' % (zipfile[:-4], DATA_DIR))
+            os.system('rm %s' % (zipfile))
 
     # if not os.path.exists(os.path.join(DATA_DIR, 'modelnet40_ply_hdf5_2048')):
     #     www = 'http://3dvision.princeton.edu/projects/2014/3DShapeNets/ModelNet10.zip'
@@ -44,17 +84,49 @@ def download():
     #     os.system('wget %s --no-check-certificate; unzip %s -q' % (www, zipfile))
     #     os.system('mv %s %s' % (zipfile[:-4], DATA_DIR))
     #     os.system('rm %s' % (zipfile))
-    if not os.path.exists(os.path.join(DATA_DIR, 'PointDA_data')):
-        os.system('python gdrivedl.py https://drive.google.com/file/d/1vhBZ06wQvZCtQpwdmfRIe0lBnFjFjlT6/view?usp=sharing -q')
-        os.system('unzip -qq ./PointDA_data.zip')
-        os.system('mv PointDA_data ./data/')
+    elif dataset == 'modelnet10':
+        if not os.path.exists(os.path.join(DATA_DIR, 'PointDA_data')):
+            os.system('python gdrivedl.py https://drive.google.com/file/d/1vhBZ06wQvZCtQpwdmfRIe0lBnFjFjlT6/view?usp=sharing -q')
+            os.system('unzip -qq ./PointDA_data.zip')
+            os.system('mv PointDA_data ./data/')
+    elif dataset == 'scanobjectnn':
+        if not os.path.exists(os.path.join(DATA_DIR, 'ScanObjectNN')):
+            os.system('mkdir ./data/ScanObjectNN')
+            os.system('wget --no-check-certificate \'https://docs.google.com/uc?export=download&id=1ZeqaYNp6wWL_xKvuZ5onZbChlI9UZYva\' -O train.h5')
+            os.system('mv train.h5 ./data/ScanObjectNN/')
+            os.system('wget --no-check-certificate \'https://docs.google.com/uc?export=download&id=14zIWTP0jq911TqlT4nfkxLlFLW-mCnoh\' -O test.h5')
+            os.system('mv test.h5 ./data/ScanObjectNN/')
+    elif dataset == 'shapenet':
+        if not os.path.exists(os.path.join(DATA_DIR, 'shape_net_core_uniform_samples_2048')):
+            os.system('sh download_data.sh')
+            labels_lst = list(in_out.snc_category_to_synth_id().keys())
+            data = []
+            labels = []
+            for label in tqdm.tqdm(labels_lst, desc='loading data'):
+                syn_id = in_out.snc_category_to_synth_id()[label]
+                class_dir = os.path.join(SHAPENET_DIR , syn_id)
+                pc = in_out.load_all_point_clouds_under_folder(class_dir, n_threads=8, file_ending='*.ply', verbose=False)
+                cur_data, _, _ = pc.full_epoch_data(shuffle=False)
+                data.append(cur_data)
+                labels.append([labels_lst.index(label)] * cur_data.shape[0])
+            current_data = np.concatenate(data, axis=0)
+            current_label = np.concatenate(labels, axis=0)
+            print(current_data.shape)
+            print(current_label.shape)
+            
+            current_data, current_label = shuffle_data(current_data, np.squeeze(current_label))            
+            current_label = np.squeeze(current_label)
+            index = np.random.choice(2048, 1024, replace=False)
 
-    if not os.path.exists(os.path.join(DATA_DIR, 'ScanObjectNN')):
-        os.system('mkdir ./data/ScanObjectNN')
-        os.system('wget --no-check-certificate \'https://docs.google.com/uc?export=download&id=1ZeqaYNp6wWL_xKvuZ5onZbChlI9UZYva\' -O train.h5')
-        os.system('mv train.h5 ./data/ScanObjectNN/')
-        os.system('wget --no-check-certificate \'https://docs.google.com/uc?export=download&id=14zIWTP0jq911TqlT4nfkxLlFLW-mCnoh\' -O test.h5')
-        os.system('mv test.h5 ./data/ScanObjectNN/')
+            x_train, x_test, y_train, y_test = train_test_split(current_data[:,index,:], current_label, test_size=0.2, random_state=666, shuffle=True)
+
+            x_train *= 2
+            x_test *= 2
+
+            np.save('./data/shape_net_core_uniform_samples_2048/train_points.npy',x_train)
+            np.save('./data/shape_net_core_uniform_samples_2048/test_points.npy',x_test)
+            np.save('./data/shape_net_core_uniform_samples_2048/train_labels.npy',y_train)
+            np.save('./data/shape_net_core_uniform_samples_2048/test_labels.npy',y_test)
 
 
 def rotate_point_cloud(batch_data):
@@ -78,7 +150,7 @@ def rotate_point_cloud(batch_data):
     return rotated_data
 
 def parse_dataset_modelnet10(partition,num_points=1024):
-    download()
+    download('modelnet10')
     # DATA_DIR = tf.keras.utils.get_file(
     #     "modelnet.zip",
     #     "http://3dvision.princeton.edu/projects/2014/3DShapeNets/ModelNet10.zip",
@@ -160,9 +232,9 @@ def parse_dataset_modelnet10(partition,num_points=1024):
     # np.save('./data/ModelNet10/test_labels.npy',np.array(test_labels))
 
 def parse_dataset_shapenet10(partition,num_points=1024):
-    download()
+    # download('shapenet10')
     DATA_DIR = './data/PointDA_data/shapenet'
-
+    
     train_points = []
     train_labels = []
     test_points = []
@@ -231,7 +303,7 @@ def parse_dataset_shapenet10(partition,num_points=1024):
 
 
 def parse_dataset_scanobject(partition,num_points=1024):
-    download()
+    download('scanobjectnn')
     # DATA_DIR = tf.keras.utils.get_file(
     #     "modelnet.zip",
     #     "http://3dvision.princeton.edu/projects/2014/3DShapeNets/ModelNet10.zip",
@@ -306,7 +378,7 @@ def shuffle_data(data, labels):
     return data[idx, ...], labels[idx]
 
 def load_data(partition):
-    download()
+    download('modelnet40')
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     DATA_DIR = os.path.join(BASE_DIR, 'data')
     all_data = []
@@ -417,6 +489,8 @@ def rotate_point_cloud_by_angle_xyz(data, angle_x=0, angle_y=0, angle_z=0):
 class PCData(Dataset):
     def __init__(self, num_points, name='modelnet40' ,partition='train', translate = False, jitter=True, rotation=False, angles=6):
         
+        download(name)
+
         if name == 'modelnet40':
             self.data, self.label = load_data(partition)
         elif name == 'modelnet10':
@@ -425,6 +499,13 @@ class PCData(Dataset):
             self.data, self.label = parse_dataset_shapenet10(partition)
         elif name == 'scanobjectnn':
             self.data, self.label = parse_dataset_scanobject(partition)
+        elif name == 'shapenet':
+            if partition == 'train':
+                self.data = np.load('./data/shape_net_core_uniform_samples_2048/train_points.npy')
+                self.label = np.load('./data/shape_net_core_uniform_samples_2048/train_labels.npy')
+            else:
+                self.data = np.load('./data/shape_net_core_uniform_samples_2048/test_points.npy')
+                self.label = np.load('./data/shape_net_core_uniform_samples_2048/test_labels.npy')
 
         self.num_points = num_points
         self.partition = partition
@@ -505,6 +586,8 @@ def generate_jigsaw_data_label(pointcloud, k):
 
 class PCData_SSL(Dataset):
     def __init__(self, num_points, name='modelnet40', partition='train', rotation=False, angles=6, jigsaw=False, k=2):
+        
+        download(name)
         if name == 'modelnet40':
             self.data, self.label = load_data(partition)
         elif name == 'modelnet10':
@@ -513,6 +596,13 @@ class PCData_SSL(Dataset):
             self.data, self.label = parse_dataset_shapenet10(partition)
         elif name == 'scanobjectnn':
             self.data, self.label = parse_dataset_scanobject(partition)
+        elif name == 'shapenet':
+            if partition == 'train':
+                self.data = np.load('./data/shape_net_core_uniform_samples_2048/train_points.npy')
+                self.label = np.load('./data/shape_net_core_uniform_samples_2048/train_labels.npy')
+            else:
+                self.data = np.load('./data/shape_net_core_uniform_samples_2048/test_points.npy')
+                self.label = np.load('./data/shape_net_core_uniform_samples_2048/test_labels.npy')
         self.num_points = num_points
         self.partition = partition
         self.jigsaw = jigsaw
@@ -558,6 +648,7 @@ class PCData_SSL(Dataset):
 class PCData_Jigsaw(Dataset):
     def __init__(self, num_points, name='modelnet40', partition='train', jigsaw=False, k=2):
         
+        download(name)
         if name == 'modelnet40':
             self.data, self.label = load_data(partition)
         elif name == 'modelnet10':
@@ -566,6 +657,13 @@ class PCData_Jigsaw(Dataset):
             self.data, self.label = parse_dataset_shapenet10(partition)
         elif name == 'scanobjectnn':
             self.data, self.label = parse_dataset_scanobject(partition)
+        elif name == 'shapenet':
+            if partition == 'train':
+                self.data = np.load('./data/shape_net_core_uniform_samples_2048/train_points.npy')
+                self.label = np.load('./data/shape_net_core_uniform_samples_2048/train_labels.npy')
+            else:
+                self.data = np.load('./data/shape_net_core_uniform_samples_2048/test_points.npy')
+                self.label = np.load('./data/shape_net_core_uniform_samples_2048/test_labels.npy')
         self.num_points = num_points
         self.partition = partition
         self.jigsaw = jigsaw
@@ -597,6 +695,7 @@ class PCData_Jigsaw(Dataset):
 
 if __name__ == '__main__':
     download()
+    # get_shapenet_data()
     # train = ModelNet40(1024)
     # test = ModelNet40(1024, 'test')
     # for data, label in train:

@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-@Author: Jiachen Sun
-@Contact: jiachens@umich.edu
-@File: main.py
-"""
+'''
+Description: 
+Autor: Jiachen Sun
+Date: 2021-02-16 17:42:47
+LastEditors: Jiachen Sun
+LastEditTime: 2021-03-01 14:13:15
+'''
 
 
 from __future__ import print_function
@@ -14,7 +16,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.optim.lr_scheduler import CosineAnnealingLR, ExponentialLR, StepLR, MultiStepLR
+from torch.optim.lr_scheduler import CosineAnnealingLR, ExponentialLR, StepLR, MultiStepLR, ReduceLROnPlateau
 from data import PCData_SSL, PCData, PCData_Jigsaw
 from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, DGCNN_Jigsaw, DeepSym_Rotation, DeepSym_Jigsaw, Pct_Jigsaw, Pct_Rotation
 import numpy as np
