@@ -71,6 +71,8 @@ def train(args, io):
         output_channel = 10
     elif args.dataset == 'scanobjectnn':
         output_channel = 15
+    elif args.dataset == 'shapenet':
+        output_channel = 57
 
     #Try to load models
     if args.model == 'pointnet':
@@ -86,10 +88,6 @@ def train(args, io):
             #saved_model.load_state_dict(torch.load(args.p))
     else:
         raise Exception("Not implemented")
-
-    for name,m in model.named_modules():
-        if name == 'stn.fc3':
-            nn.init.uniform_(m.weight, a=-0.1,b=0.1)
 
     if args.p != '':  
         saved_model = torch.load(args.p)
@@ -209,6 +207,8 @@ def test(args, io,model=None, dataloader=None):
         output_channel = 10
     elif args.dataset == 'scanobjectnn':
         output_channel = 15
+    elif args.dataset == 'shapenet':
+        output_channel = 57
     #Try to load models
     if model is None:
         if args.model == 'pointnet':
@@ -270,6 +270,8 @@ def adversarial(args,io,model=None, dataloader=None):
         output_channel = 10
     elif args.dataset == 'scanobjectnn':
         output_channel = 15
+    elif args.dataset == 'shapenet':
+        output_channel = 57
     #Try to load models
     if model is None:
         if args.model == 'pointnet':
