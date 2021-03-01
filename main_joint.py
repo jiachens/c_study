@@ -68,22 +68,28 @@ def train(args, io):
 
     device = torch.device("cuda" if args.cuda else "cpu")
 
+    if args.dataset == 'modelnet40':
+        output_channel = 40
+    elif args.dataset == 'modelnet10':
+        output_channel = 10
+    elif args.dataset == 'scanobjectnn':
+        output_channel = 15
     #Try to load models
     if args.model == 'pointnet':
         if args.rotation:
-            model = PointNet_Rotation(args).to(device)
+            model = PointNet_Rotation(args,output_channels=output_channel).to(device)
         elif args.jigsaw:
-            model = PointNet_Jigsaw(args).to(device)
+            model = PointNet_Jigsaw(args,output_channels=output_channel).to(device)
     elif args.model == 'dgcnn':
         if args.rotation:
-            model = DGCNN_Rotation(args).to(device)
+            model = DGCNN_Rotation(args,output_channels=output_channel).to(device)
         elif args.jigsaw:
-            model = DGCNN_Jigsaw(args).to(device)
+            model = DGCNN_Jigsaw(args,output_channels=output_channel).to(device)
     elif args.model == 'pct':
         if args.rotation:
-            model = Pct_Rotation(args).to(device)
+            model = Pct_Rotation(args,output_channels=output_channel).to(device)
         elif args.jigsaw:
-            model = Pct_Jigsaw(args).to(device)
+            model = Pct_Jigsaw(args,output_channels=output_channel).to(device)
             #saved_model.load_state_dict(torch.load(args.p))
     else:
         raise Exception("Not implemented")
@@ -269,23 +275,30 @@ def test(args, io,model=None, dataloader=None):
 
     device = torch.device("cuda" if args.cuda else "cpu")
 
+    if args.dataset == 'modelnet40':
+        output_channel = 40
+    elif args.dataset == 'modelnet10':
+        output_channel = 10
+    elif args.dataset == 'scanobjectnn':
+        output_channel = 15
+
     #Try to load models
     if model is None:
         if args.model == 'pointnet':
             if args.rotation:
-                model = PointNet_Rotation(args).to(device)
+                model = PointNet_Rotation(args,output_channels=output_channel).to(device)
             elif args.jigsaw:
-                model = PointNet_Jigsaw(args).to(device)
+                model = PointNet_Jigsaw(args,output_channels=output_channel).to(device)
         elif args.model == 'dgcnn':
             if args.rotation:
-                model = DGCNN_Rotation(args).to(device)
+                model = DGCNN_Rotation(args,output_channels=output_channel).to(device)
             elif args.jigsaw:
-                model = DGCNN_Jigsaw(args).to(device)
+                model = DGCNN_Jigsaw(args,output_channels=output_channel).to(device)
         elif args.model == 'pct':
             if args.rotation:
-                model = Pct_Rotation(args).to(device)
+                model = Pct_Rotation(args,output_channels=output_channel).to(device)
             elif args.jigsaw:
-                model = Pct_Jigsaw(args).to(device)
+                model = Pct_Jigsaw(args,output_channels=output_channel).to(device)
                 #saved_model.load_state_dict(torch.load(args.p))
         else:
             raise Exception("Not implemented")
@@ -334,22 +347,30 @@ def adversarial(args,io,model=None, dataloader=None):
     device = torch.device("cuda" if args.cuda else "cpu")
 
     #Try to load models
+    if args.dataset == 'modelnet40':
+        output_channel = 40
+    elif args.dataset == 'modelnet10':
+        output_channel = 10
+    elif args.dataset == 'scanobjectnn':
+        output_channel = 15
+
+    #Try to load models
     if model is None:
         if args.model == 'pointnet':
             if args.rotation:
-                model = PointNet_Rotation(args).to(device)
+                model = PointNet_Rotation(args,output_channels=output_channel).to(device)
             elif args.jigsaw:
-                model = PointNet_Jigsaw(args).to(device)
+                model = PointNet_Jigsaw(args,output_channels=output_channel).to(device)
         elif args.model == 'dgcnn':
             if args.rotation:
-                model = DGCNN_Rotation(args).to(device)
+                model = DGCNN_Rotation(args,output_channels=output_channel).to(device)
             elif args.jigsaw:
-                model = DGCNN_Jigsaw(args).to(device)
+                model = DGCNN_Jigsaw(args,output_channels=output_channel).to(device)
         elif args.model == 'pct':
             if args.rotation:
-                model = Pct_Rotation(args).to(device)
+                model = Pct_Rotation(args,output_channels=output_channel).to(device)
             elif args.jigsaw:
-                model = Pct_Jigsaw(args).to(device)
+                model = Pct_Jigsaw(args,output_channels=output_channel).to(device)
                 #saved_model.load_state_dict(torch.load(args.p))
         else:
             raise Exception("Not implemented")
