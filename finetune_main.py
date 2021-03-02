@@ -127,7 +127,11 @@ def train(args, io):
     criterion = cal_loss
 
 
-    best_test_acc = 0
+    best_test_acc_adv = 0
+    best_model = None
+    best_epoch = 0
+
+
     for epoch in range(args.epochs):
         ####################
         # Train
@@ -178,15 +182,22 @@ def train(args, io):
         else:
             scheduler.step()
         
-        test(args,io,model=model, dataloader = test_loader)
+        acc = test(args,io,model=model, dataloader = test_loader)
 
-        if epoch % 10 == 0 or epoch == 249:
-            if epoch == 249:
+        if epoch % 10 == 0 or epoch == args.epochs-1:
+            if epoch == args.epochs-1:
                 args.test_iter = 200
                 args.alpha = 0.005
+                io.cprint('Best epoch: %d' % best_epoch)
+                io.cprint('Best model in 7-step test:')
+                adversarial(args,io,model=best_model, dataloader = test_loader)
+                torch.save(best_model.state_dict(), args.pre_path+'finetune_checkpoints/%s/models/model_best.t7' % (args.exp_name))
 
-            adversarial(args,io,model=model, dataloader = test_loader)
-            # io.cprint(outstr)
+            acc_adv = adversarial(args,io,model=model, dataloader = test_loader)
+            if acc_adv > best_test_acc_adv:
+                best_model = model
+                best_epoch = epoch
+                best_test_acc_adv = acc_adv
 
             torch.save(model.state_dict(), args.pre_path+'finetune_checkpoints/%s/models/model_epoch%d.t7' % (args.exp_name,epoch))
     return model
@@ -253,6 +264,8 @@ def test(args, io,model=None, dataloader=None):
     outstr = 'Test :: test acc: %.6f, test avg acc: %.6f'%(test_acc, avg_per_class_acc)
     io.cprint(outstr)
 
+    return test_acc
+
 
 def adversarial(args,io,model=None, dataloader=None):
 
@@ -309,7 +322,7 @@ def adversarial(args,io,model=None, dataloader=None):
     avg_per_class_acc = metrics.balanced_accuracy_score(test_true, test_pred)
     outstr = 'Adversarial :: ADV_test acc: %.6f, ADV_test avg acc: %.6f'%(test_acc, avg_per_class_acc)
     io.cprint(outstr)
-
+    return test_acc
 
 if __name__ == "__main__":
     # Training settings
