@@ -98,6 +98,12 @@ def train(args, io):
             state_dict = {k[7:]:v for k,v in saved_model.items() if (k[7:] in model_dict.keys())} # module.
         model_dict.update(state_dict)
         model.load_state_dict(model_dict)
+    else:
+        if args.model == 'pointnet_simple':
+            for name,m in model.named_modules():
+                if isinstance(m, (nn.Conv1d, nn.Linear)):
+                    nn.init.xavier_uniform_(m.weight)
+                    # nn.init.constant_(m.bias, 0.)
 
 
     print(str(model))
@@ -136,6 +142,16 @@ def train(args, io):
         ####################
         # Train
         ####################
+
+        if args.model == 'pointnet':
+            if epoch % 20 == 0:
+                for layer in model.modules():
+                    if type(layer) == torch.nn.modules.batchnorm.BatchNorm1d:
+                        layer.momentum = max(0.01, 0.5**((epoch // 20) + 1))
+                    # if type(layer) == model.STN3d or type(layer) == model.STNkd:
+                    #     for sublayer in layer:
+                    #         if type(sublayer) == torch.nn.modules.batchnorm.BatchNorm1d:
+                    #             sublayer.momentum = np.max(0.01, 0.5**((epoch // 20) + 1))
 
         train_loss = 0.0
         count = 0.0

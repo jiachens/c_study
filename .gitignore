@@ -6,3 +6,4 @@ plot*
 data
 PointDA*
 latent_3d_points_py3/data
+*.sh
