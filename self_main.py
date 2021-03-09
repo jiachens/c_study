@@ -5,7 +5,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-02-16 17:42:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-03-01 14:13:15
+LastEditTime: 2021-03-09 13:45:23
 '''
 
 
@@ -18,7 +18,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import CosineAnnealingLR, ExponentialLR, StepLR, MultiStepLR, ReduceLROnPlateau
 from data import PCData_SSL, PCData, PCData_Jigsaw
-from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, DGCNN_Jigsaw, DeepSym_Rotation, DeepSym_Jigsaw, Pct_Jigsaw, Pct_Rotation
+from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, DGCNN_Jigsaw, DeepSym_Rotation, DeepSym_Jigsaw, Pct_Jigsaw, Pct_Rotation, PointNet_Simple_Rotation, PointNet_Simple_Jigsaw
 import numpy as np
 from torch.utils.data import DataLoader
 import sys
@@ -79,10 +79,19 @@ def train(args, io):
         model = Pct_Jigsaw(args).to(device)
     elif args.model == 'pct_rotation':
         model = Pct_Rotation(args).to(device)
+    elif args.model == 'pointnet_simple_rotation':
+        model = PointNet_Simple_Rotation(args).to(device)
+    elif args.model == 'pointnet_simple_jigsaw':
+        model = PointNet_Simple_Jigsaw(args).to(device)
     else:
         raise Exception("Not implemented")
 
-
+    if args.model == 'pointnet_simple':
+        for name,m in model.named_modules():
+            if isinstance(m, (nn.Conv1d, nn.Linear)):
+                nn.init.xavier_uniform_(m.weight)
+                # nn.init.constant_(m.bias, 0.)
+                    
     print(str(model))
 
     model = nn.DataParallel(model)
@@ -243,6 +252,10 @@ def test(args, io,model=None, dataloader=None):
             model = Pct_Jigsaw(args).to(device)
         elif args.model == 'pct_rotation':
             model = Pct_Rotation(args).to(device)
+        elif args.model == 'pointnet_simple_rotation':
+            model = PointNet_Simple_Rotation(args).to(device)
+        elif args.model == 'pointnet_simple_jigsaw':
+            model = PointNet_Simple_Jigsaw(args).to(device)
         else:
             raise Exception("Not implemented")
         model = nn.DataParallel(model)
@@ -301,6 +314,10 @@ def adversarial(args,io,model=None, dataloader=None):
             model = Pct_Jigsaw(args).to(device)
         elif args.model == 'pct_rotation':
             model = Pct_Rotation(args).to(device)
+        elif args.model == 'pointnet_simple_rotation':
+            model = PointNet_Simple_Rotation(args).to(device)
+        elif args.model == 'pointnet_simple_jigsaw':
+            model = PointNet_Simple_Jigsaw(args).to(device)
         else:
             raise Exception("Not implemented")
         model = nn.DataParallel(model)
@@ -336,7 +353,7 @@ if __name__ == "__main__":
     parser.add_argument('--exp_name', type=str, default='exp', metavar='N',
                         help='Name of the experiment')
     parser.add_argument('--model', type=str, default='dgcnn', metavar='N',
-                        choices=['pointnet_rotation', 'dgcnn_rotation', 'pointnet_jigsaw', 'dgcnn_jigsaw', 'deepsym_jigsaw', 'deepsym_rotation','pct_rotation','pct_jigsaw'],
+                        choices=['pointnet_rotation', 'dgcnn_rotation', 'pointnet_jigsaw', 'dgcnn_jigsaw', 'deepsym_jigsaw', 'deepsym_rotation','pct_rotation','pct_jigsaw','pointnet_simple_rotation','pointnet_simple_jigsaw'],
                         help='Model to use, [pointnet, dgcnn]')
     parser.add_argument('--dataset', type=str, default='modelnet40', metavar='N')
     parser.add_argument('--batch_size', type=int, default=32, metavar='batch_size',
