@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-03-01 15:17:25
+LastEditTime: 2021-03-11 17:17:42
 '''
 
 import os
@@ -583,9 +583,29 @@ def generate_jigsaw_data_label(pointcloud, k):
 
     return jigsaw_pointcloud, label
 
+def add_noise(pointcloud, label):
+    N, C = pointcloud.shape
+    jitter = label * 0.01 * np.sign(np.random.randn(N, C))
+    new_pc = (pointcloud + jitter).astype('float32')
+
+    new_pc[:,0] -= (np.max(new_pc[:,0]) + np.min(new_pc[:,0])) / 2
+    new_pc[:,1] -= (np.max(new_pc[:,1]) + np.min(new_pc[:,1])) / 2
+    new_pc[:,2] -= (np.max(new_pc[:,2]) + np.min(new_pc[:,2])) / 2
+    leng_x, leng_y, leng_z = np.max(new_pc[:,0]) - np.min(new_pc[:,0]), np.max(new_pc[:,1]) - np.min(new_pc[:,1]), np.max(new_pc[:,2]) - np.min(new_pc[:,2])
+    if leng_x >= leng_y and leng_x >= leng_z:
+        ratio = 2.0 / leng_x
+    elif leng_y >= leng_x and leng_y >= leng_z:
+        ratio = 2.0 / leng_y
+    else:
+        ratio = 2.0 / leng_z
+
+    new_pc *= ratio
+
+    return new_pc
+
 
 class PCData_SSL(Dataset):
-    def __init__(self, num_points, name='modelnet40', partition='train', rotation=False, angles=6, jigsaw=False, k=2):
+    def __init__(self, num_points, name='modelnet40', partition='train', rotation=False, angles=6, jigsaw=False, k=2, noise=False, level=2):
         
         download(name)
         if name == 'modelnet40':
@@ -609,18 +629,19 @@ class PCData_SSL(Dataset):
         self.k = k
         self.rotation = rotation
         self.angles = angles
+        self.noise = noise
+        self.level = level
 
         # print(np.max(self.data), np.min(self.data))
-
-
     def __getitem__(self, item):
         pointcloud = self.data[item][:self.num_points]
         label = self.label[item]
-        if not self.jigsaw and not self.rotation:
+        if not self.jigsaw and not self.rotation and not self.noise:
             if self.partition == 'train':
                 pointcloud,_ = jitter_pointcloud(pointcloud)
                 # np.random.shuffle(pointcloud)
             return pointcloud, label # the latter two are not used 
+
         elif self.jigsaw:
 
             if self.partition == 'train':
@@ -630,6 +651,7 @@ class PCData_SSL(Dataset):
             #rotation_label = np.squeeze(rotation_label)
 
             return jigsaw_pointcloud.astype('float32'),jigsaw_label
+            
         elif self.rotation:
 
             if self.partition == 'train':
@@ -640,6 +662,17 @@ class PCData_SSL(Dataset):
             rotated_pointcloud = rotate_data(pointcloud, rotation_label)
 
             return rotated_pointcloud.astype('float32'),rotation_label
+        
+        elif self.noise:
+
+            # if self.partition == 'train':
+            #     pointcloud,_ = jitter_pointcloud(pointcloud)
+                # np.random.shuffle(pointcloud)
+            noise_label = np.random.randint(self.level)
+            #rotation_label = np.squeeze(rotation_label)
+            rotated_pointcloud = add_noise(pointcloud, noise_label)
+
+            return rotated_pointcloud.astype('float32'),noise_label
 
 
     def __len__(self):
