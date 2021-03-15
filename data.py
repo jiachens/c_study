@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-03-11 17:17:42
+LastEditTime: 2021-03-14 23:29:01
 '''
 
 import os
@@ -583,9 +583,9 @@ def generate_jigsaw_data_label(pointcloud, k):
 
     return jigsaw_pointcloud, label
 
-def add_noise(pointcloud, label):
+def add_noise(pointcloud, label, level):
     N, C = pointcloud.shape
-    jitter = label * 0.01 * np.sign(np.random.randn(N, C))
+    jitter = label * (0.1 / level) * np.sign(np.random.randn(N, C))
     new_pc = (pointcloud + jitter).astype('float32')
 
     new_pc[:,0] -= (np.max(new_pc[:,0]) + np.min(new_pc[:,0])) / 2
@@ -670,7 +670,7 @@ class PCData_SSL(Dataset):
                 # np.random.shuffle(pointcloud)
             noise_label = np.random.randint(self.level)
             #rotation_label = np.squeeze(rotation_label)
-            rotated_pointcloud = add_noise(pointcloud, noise_label)
+            rotated_pointcloud = add_noise(pointcloud, noise_label, self.level)
 
             return rotated_pointcloud.astype('float32'),noise_label
 
