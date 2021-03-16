@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-02-16 21:25:32
 LastEditors: Jiachen Sun
-LastEditTime: 2021-03-10 23:59:15
+LastEditTime: 2021-03-16 16:49:25
 '''
 
 import os
@@ -330,6 +330,58 @@ class Pct_Jigsaw(nn.Module):
 
         return x, None, None
 
+# class Pct(nn.Module):
+#     def __init__(self, args, output_channels=40):
+#         super(Pct, self).__init__()
+#         self.args = args
+#         self.conv1 = nn.Conv1d(3, 64, kernel_size=1, bias=False)
+#         self.conv2 = nn.Conv1d(64, 64, kernel_size=1, bias=False)
+#         self.bn1 = nn.BatchNorm1d(64)
+#         self.bn2 = nn.BatchNorm1d(64)
+#         self.gather_local_0 = Local_op(in_channels=128, out_channels=128)
+#         self.gather_local_1 = Local_op(in_channels=256, out_channels=256)
+
+#         self.pt_last = Point_Transformer_Last(args)
+
+#         self.conv_fuse = nn.Sequential(nn.Conv1d(1280, 1024, kernel_size=1, bias=False),
+#                                     nn.BatchNorm1d(1024),
+#                                     nn.LeakyReLU(negative_slope=0.2))
+
+
+#         self.linear1 = nn.Linear(1024, 512, bias=False)
+#         self.bn6 = nn.BatchNorm1d(512)
+#         self.dp1 = nn.Dropout(p=args.dropout)
+#         self.linear2 = nn.Linear(512, 256)
+#         self.bn7 = nn.BatchNorm1d(256)
+#         self.dp2 = nn.Dropout(p=args.dropout)
+#         self.linear3 = nn.Linear(256, output_channels)
+
+#     def forward(self, x):
+#         xyz = x.permute(0, 2, 1)
+#         batch_size, _, _ = x.size()
+#         # B, D, N
+#         x = F.relu(self.bn1(self.conv1(x)))
+#         # B, D, N
+#         x = F.relu(self.bn2(self.conv2(x)))
+#         x = x.permute(0, 2, 1)
+#         new_xyz, new_feature = sample_and_group(npoint=512, radius=0.15, nsample=32, xyz=xyz, points=x)         
+#         feature_0 = self.gather_local_0(new_feature)
+#         feature = feature_0.permute(0, 2, 1)
+#         new_xyz, new_feature = sample_and_group(npoint=256, radius=0.2, nsample=32, xyz=new_xyz, points=feature) 
+#         feature_1 = self.gather_local_1(new_feature)
+
+#         x = self.pt_last(feature_1)
+#         x = torch.cat([x, feature_1], dim=1)
+#         x = self.conv_fuse(x)
+#         x = F.adaptive_max_pool1d(x, 1).view(batch_size, -1)
+#         x = F.leaky_relu(self.bn6(self.linear1(x)), negative_slope=0.2)
+#         x = self.dp1(x)
+#         x = F.leaky_relu(self.bn7(self.linear2(x)), negative_slope=0.2)
+#         x = self.dp2(x)
+#         x = self.linear3(x)
+
+#         return x, None, None
+
 class Pct(nn.Module):
     def __init__(self, args, output_channels=40):
         super(Pct, self).__init__()
@@ -338,15 +390,27 @@ class Pct(nn.Module):
         self.conv2 = nn.Conv1d(64, 64, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm1d(64)
         self.bn2 = nn.BatchNorm1d(64)
-        self.gather_local_0 = Local_op(in_channels=128, out_channels=128)
-        self.gather_local_1 = Local_op(in_channels=256, out_channels=256)
+        self.bn3 = nn.BatchNorm2d(128)
+        self.bn4 = nn.BatchNorm2d(256)
+        # self.gather_local_0 = Local_op(in_channels=128, out_channels=128)
+        # self.gather_local_1 = Local_op(in_channels=256, out_channels=256)
+
+        self.seq1 = nn.Sequential(nn.Conv2d(128, 128, kernel_size=1, bias=False),
+                                   self.bn3,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.seq2 = nn.Sequential(nn.Conv2d(256, 256, kernel_size=1, bias=False),
+                                   self.bn4,
+                                   nn.LeakyReLU(negative_slope=0.2))
 
         self.pt_last = Point_Transformer_Last(args)
+
 
         self.conv_fuse = nn.Sequential(nn.Conv1d(1280, 1024, kernel_size=1, bias=False),
                                     nn.BatchNorm1d(1024),
                                     nn.LeakyReLU(negative_slope=0.2))
 
+        self.pool1 = MAXPOOL()
+        self.pool2 = MAXPOOL()
 
         self.linear1 = nn.Linear(1024, 512, bias=False)
         self.bn6 = nn.BatchNorm1d(512)
@@ -363,12 +427,22 @@ class Pct(nn.Module):
         x = F.relu(self.bn1(self.conv1(x)))
         # B, D, N
         x = F.relu(self.bn2(self.conv2(x)))
-        x = x.permute(0, 2, 1)
-        new_xyz, new_feature = sample_and_group(npoint=512, radius=0.15, nsample=32, xyz=xyz, points=x)         
-        feature_0 = self.gather_local_0(new_feature)
-        feature = feature_0.permute(0, 2, 1)
-        new_xyz, new_feature = sample_and_group(npoint=256, radius=0.2, nsample=32, xyz=new_xyz, points=feature) 
-        feature_1 = self.gather_local_1(new_feature)
+        # x = x.permute(0, 2, 1)
+
+        x = get_graph_feature(x, k=32)
+        x = self.seq1(x)
+        x1 = self.pool1(x)
+
+        x = get_graph_feature(x1, k=32)
+        x = self.seq2(x)
+        feature_1 = self.pool1(x)
+        # print(feature_1.shape)
+        # x = x.permute(0, 2, 1)
+        # new_xyz, new_feature = sample_and_group(npoint=512, radius=0.15, nsample=32, xyz=xyz, points=x)         
+        # feature_0 = self.gather_local_0(new_feature)
+        # feature = feature_0.permute(0, 2, 1)
+        # new_xyz, new_feature = sample_and_group(npoint=256, radius=0.2, nsample=32, xyz=new_xyz, points=feature) 
+        # feature_1 = self.gather_local_1(new_feature)
 
         x = self.pt_last(feature_1)
         x = torch.cat([x, feature_1], dim=1)
