@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-02-16 21:25:32
 LastEditors: Jiachen Sun
-LastEditTime: 2021-03-16 16:49:25
+LastEditTime: 2021-03-17 14:37:42
 '''
 
 import os
@@ -214,8 +214,17 @@ class Pct_Rotation(nn.Module):
         self.conv2 = nn.Conv1d(64, 64, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm1d(64)
         self.bn2 = nn.BatchNorm1d(64)
-        self.gather_local_0 = Local_op(in_channels=128, out_channels=128)
-        self.gather_local_1 = Local_op(in_channels=256, out_channels=256)
+        self.bn3 = nn.BatchNorm2d(128)
+        self.bn4 = nn.BatchNorm2d(256)
+        # self.gather_local_0 = Local_op(in_channels=128, out_channels=128)
+        # self.gather_local_1 = Local_op(in_channels=256, out_channels=256)
+
+        self.seq1 = nn.Sequential(nn.Conv2d(128, 128, kernel_size=1, bias=False),
+                                   self.bn3,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.seq2 = nn.Sequential(nn.Conv2d(256, 256, kernel_size=1, bias=False),
+                                   self.bn4,
+                                   nn.LeakyReLU(negative_slope=0.2))
 
         self.pt_last = Point_Transformer_Last(args)
 
@@ -239,12 +248,20 @@ class Pct_Rotation(nn.Module):
         x = F.relu(self.bn1(self.conv1(x)))
         # B, D, N
         x = F.relu(self.bn2(self.conv2(x)))
-        x = x.permute(0, 2, 1)
-        new_xyz, new_feature = sample_and_group(npoint=512, radius=0.15, nsample=32, xyz=xyz, points=x)         
-        feature_0 = self.gather_local_0(new_feature)
-        feature = feature_0.permute(0, 2, 1)
-        new_xyz, new_feature = sample_and_group(npoint=256, radius=0.2, nsample=32, xyz=new_xyz, points=feature) 
-        feature_1 = self.gather_local_1(new_feature)
+        # x = x.permute(0, 2, 1)
+        # new_xyz, new_feature = sample_and_group(npoint=512, radius=0.15, nsample=32, xyz=xyz, points=x)         
+        # feature_0 = self.gather_local_0(new_feature)
+        # feature = feature_0.permute(0, 2, 1)
+        # new_xyz, new_feature = sample_and_group(npoint=256, radius=0.2, nsample=32, xyz=new_xyz, points=feature) 
+        # feature_1 = self.gather_local_1(new_feature)
+
+        x = get_graph_feature(x, k=32)
+        x = self.seq1(x)
+        x1 = self.pool1(x)
+
+        x = get_graph_feature(x1, k=32)
+        x = self.seq2(x)
+        feature_1 = self.pool1(x)
 
         x = self.pt_last(feature_1)
         x = torch.cat([x, feature_1], dim=1)
@@ -267,8 +284,17 @@ class Pct_Jigsaw(nn.Module):
         self.conv2 = nn.Conv1d(64, 64, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm1d(64)
         self.bn2 = nn.BatchNorm1d(64)
-        self.gather_local_0 = Local_op(in_channels=128, out_channels=128)
-        self.gather_local_1 = Local_op(in_channels=256, out_channels=256)
+        self.bn3 = nn.BatchNorm2d(128)
+        self.bn4 = nn.BatchNorm2d(256)
+        # self.gather_local_0 = Local_op(in_channels=128, out_channels=128)
+        # self.gather_local_1 = Local_op(in_channels=256, out_channels=256)
+
+        self.seq1 = nn.Sequential(nn.Conv2d(128, 128, kernel_size=1, bias=False),
+                                   self.bn3,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.seq2 = nn.Sequential(nn.Conv2d(256, 256, kernel_size=1, bias=False),
+                                   self.bn4,
+                                   nn.LeakyReLU(negative_slope=0.2))
 
         self.pt_last = Point_Transformer_Last(args)
 
@@ -300,12 +326,19 @@ class Pct_Jigsaw(nn.Module):
         # B, D, N
         x = F.relu(self.bn2(self.conv2(x)))
         pointfeat = x
-        x = x.permute(0, 2, 1)
-        new_xyz, new_feature = sample_and_group(npoint=512, radius=0.15, nsample=32, xyz=xyz, points=x)         
-        feature_0 = self.gather_local_0(new_feature)
-        feature = feature_0.permute(0, 2, 1)
-        new_xyz, new_feature = sample_and_group(npoint=256, radius=0.2, nsample=32, xyz=new_xyz, points=feature) 
-        feature_1 = self.gather_local_1(new_feature)
+        # x = x.permute(0, 2, 1)
+        # new_xyz, new_feature = sample_and_group(npoint=512, radius=0.15, nsample=32, xyz=xyz, points=x)         
+        # feature_0 = self.gather_local_0(new_feature)
+        # feature = feature_0.permute(0, 2, 1)
+        # new_xyz, new_feature = sample_and_group(npoint=256, radius=0.2, nsample=32, xyz=new_xyz, points=feature) 
+        # feature_1 = self.gather_local_1(new_feature)
+        x = get_graph_feature(x, k=32)
+        x = self.seq1(x)
+        x1 = self.pool1(x)
+
+        x = get_graph_feature(x1, k=32)
+        x = self.seq2(x)
+        feature_1 = self.pool1(x)
 
         x = self.pt_last(feature_1)
         x = torch.cat([x, feature_1], dim=1)
