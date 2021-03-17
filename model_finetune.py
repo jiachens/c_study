@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-02-16 21:25:32
 LastEditors: Jiachen Sun
-LastEditTime: 2021-03-17 14:37:42
+LastEditTime: 2021-03-17 15:51:16
 '''
 
 import os
@@ -225,6 +225,8 @@ class Pct_Rotation(nn.Module):
         self.seq2 = nn.Sequential(nn.Conv2d(256, 256, kernel_size=1, bias=False),
                                    self.bn4,
                                    nn.LeakyReLU(negative_slope=0.2))
+        self.pool1 = MAXPOOL()
+        self.pool2 = MAXPOOL()
 
         self.pt_last = Point_Transformer_Last(args)
 
@@ -302,7 +304,8 @@ class Pct_Jigsaw(nn.Module):
                                     nn.BatchNorm1d(1024),
                                     nn.LeakyReLU(negative_slope=0.2))
 
-
+        self.pool1 = MAXPOOL()
+        self.pool2 = MAXPOOL()
         # self.linear1 = nn.Linear(1024, 512, bias=False)
         # self.bn6 = nn.BatchNorm1d(512)
         # self.dp1 = nn.Dropout(p=args.dropout)
