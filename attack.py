@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-03-01 14:14:24
+LastEditTime: 2021-03-22 16:16:18
 '''
 
 import torch
@@ -16,23 +16,23 @@ torch.backends.cudnn.benchmark = False
 import torch.nn.functional as F
 from util import cross_entropy_with_probs, cal_loss
 
-def ATTA_attack(model,data,labels,natural_data,eps=0.01,alpha=0.001,iters=1):
-    model.eval()
-    adv_data=data.clone()
-    adv_data.detach()
-    for i in range(iters):
-        adv_data.requires_grad=True
-        outputs,_,_ = model(adv_data)
-        loss = F.cross_entropy(outputs,labels)
-        loss.backward()
-        with torch.no_grad():    
-            adv_data = adv_data + alpha*adv_data.grad.sign()
-            delta = adv_data-natural_data
-            delta = torch.clamp(delta,-eps,eps)
-            adv_data = natural_data+delta
-            #If points outside the unit cube are invalid then
-            # adv_data = torch.clamp(adv_data,-1,1)
-    return adv_data.cuda()
+# def ATTA_attack(model,data,labels,natural_data,eps=0.01,alpha=0.001,iters=1):
+#     model.eval()
+#     adv_data=data.clone()
+#     adv_data.detach()
+#     for i in range(iters):
+#         adv_data.requires_grad=True
+#         outputs,_,_ = model(adv_data)
+#         loss = F.cross_entropy(outputs,labels)
+#         loss.backward()
+#         with torch.no_grad():    
+#             adv_data = adv_data + alpha*adv_data.grad.sign()
+#             delta = adv_data-natural_data
+#             delta = torch.clamp(delta,-eps,eps)
+#             adv_data = natural_data+delta
+#             #If points outside the unit cube are invalid then
+#             # adv_data = torch.clamp(adv_data,-1,1)
+#     return adv_data.cuda()
  
 def pgd_attack(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=False):
     model.eval()
@@ -74,3 +74,42 @@ def pgd_attack(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=F
             
     return best_examples.cuda()
  
+
+def pgd_attack_seg(model,data,labels,number,eps=0.01,alpha=0.0002,iters=50,repeat=1):
+    model.eval()
+    max_loss = -1
+    best_examples=None
+    for i in range(repeat):
+        adv_data=data.clone()
+        adv_data=adv_data+(torch.rand_like(adv_data)*eps*2-eps)
+        # adv_data = torch.clamp(data,-1,1)
+        adv_data.detach()
+        for i in range(iters):
+            adv_data.requires_grad=True
+            logits,_,_ = model(adv_data)
+            logits = logits.view(-1,number)
+            labels = labels.view(-1,1)[:,0]
+            loss= F.nll_loss(logits,labels)
+            # loss = cal_loss(outputs,None,labels)
+            # print(torch.autograd.grad(loss,adv_data,create_graph=True))   
+            loss.backward()
+            with torch.no_grad():
+                adv_data = adv_data + alpha*adv_data.grad.sign()
+                delta = adv_data-data
+                delta = torch.clamp(delta,-eps,eps)
+                adv_data = data+delta
+               #If points outside the unit cube are invalid then
+                # adv_data = torch.clamp(adv_data,-1,1)
+            if loss > max_loss:
+                max_loss=loss
+                best_examples=adv_data.cpu()
+
+        logits,_,_ = model(adv_data)
+        logits = logits.view(-1,number)
+        labels = labels.view(-1,1)[:,0]
+        loss= F.nll_loss(logits,labels)
+        if loss > max_loss:
+            max_loss=loss
+            best_examples=adv_data.cpu()
+            
+    return best_examples.cuda()

@@ -5,7 +5,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-02-16 17:42:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-03-11 00:03:30
+LastEditTime: 2021-03-22 16:17:06
 '''
 
 
@@ -169,7 +169,8 @@ def train(args, io):
             elif args.jigsaw:             
                 jigsaw_data, jigsaw_label = aug_data.to(device).float(), aug_label.to(device).squeeze().long()
                 if args.adversarial:
-                    pass
+                    jigsaw_data = attack.pgd_attack_seg(model,jigsaw_data,jigsaw_label,args.k1**3,eps=args.eps,alpha=args.alpha,iters=args.train_iter) 
+                    model.train()
                 opt.zero_grad()
                 logits_jigsaw,_,_ = model(jigsaw_data)
                 logits_jigsaw = logits_jigsaw.view(-1,args.k1**3)
