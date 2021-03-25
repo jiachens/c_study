@@ -1,13 +1,10 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 '''
 Description: 
 Autor: Jiachen Sun
-Date: 2021-02-16 17:42:47
+Date: 2021-03-24 21:15:08
 LastEditors: Jiachen Sun
-LastEditTime: 2021-03-24 21:14:57
+LastEditTime: 2021-03-25 00:26:30
 '''
-
 
 from __future__ import print_function
 import os
@@ -18,7 +15,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import CosineAnnealingLR, ExponentialLR, StepLR, MultiStepLR, ReduceLROnPlateau
 from data import PCData_SSL, PCData, PCData_Jigsaw
-from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, DGCNN_Jigsaw, DeepSym_Rotation, DeepSym_Jigsaw, Pct_Jigsaw, Pct_Rotation, PointNet_Simple_Rotation, PointNet_Simple_Jigsaw, DGCNN_Noise
+from model_combine import PointNet_Simple_Combine, DGCNN_Combine
 import numpy as np
 from torch.utils.data import DataLoader
 import sys
@@ -55,46 +52,28 @@ def set_bn_eval(m):
 
 def train(args, io):
 
-    train_loader = DataLoader(PCData_SSL(name=args.dataset, partition='train', num_points=args.num_points, rotation=args.rotation, angles=args.angles, jigsaw=args.jigsaw, k=args.k1, 
+    train_loader = DataLoader(PCData_SSL(name=args.dataset, partition='train', num_points=args.num_points, combine=args.combine,rotation=args.rotation, angles=args.angles, jigsaw=args.jigsaw, k=args.k1, 
                                 noise=args.noise, level=args.level), num_workers=8,
                               batch_size=args.batch_size, shuffle=True, drop_last=True)
-    test_loader = DataLoader(PCData_SSL(name=args.dataset,partition='test', num_points=args.num_points, rotation=args.rotation, angles=args.angles, jigsaw=args.jigsaw, k=args.k1, 
+    test_loader = DataLoader(PCData_SSL(name=args.dataset,partition='test', num_points=args.num_points, combine=args.combine,rotation=args.rotation, angles=args.angles, jigsaw=args.jigsaw, k=args.k1, 
                             noise=args.noise, level=args.level), num_workers=8,
                              batch_size=args.test_batch_size, shuffle=False, drop_last=False)
 
     device = torch.device("cuda" if args.cuda else "cpu")
 
     #Try to load models
-    if args.model == 'pointnet_rotation':
-        model = PointNet_Rotation(args).to(device)
-    elif args.model == 'dgcnn_rotation':
-        model = DGCNN_Rotation(args).to(device)
-    elif args.model == 'dgcnn_noise':
-        model = DGCNN_Noise(args).to(device)
-    elif args.model == 'pointnet_jigsaw':
-        model = PointNet_Jigsaw(args).to(device)
-    elif args.model == 'dgcnn_jigsaw':
-        model = DGCNN_Jigsaw(args).to(device)
-    elif args.model == 'deepsym_jigsaw':
-        model = DeepSym_Jigsaw(args).to(device)
-    elif args.model == 'deepsym_rotation':
-        model = DeepSym_Rotation(args).to(device)
-    elif args.model == 'pct_jigsaw':
-        model = Pct_Jigsaw(args).to(device)
-    elif args.model == 'pct_rotation':
-        model = Pct_Rotation(args).to(device)
-    elif args.model == 'pointnet_simple_rotation':
-        model = PointNet_Simple_Rotation(args).to(device)
-    elif args.model == 'pointnet_simple_jigsaw':
-        model = PointNet_Simple_Jigsaw(args).to(device)
+    if args.model == 'pointnet_simple_combine':
+        model = PointNet_Simple_Combine(args).to(device)
+    elif args.model == 'dgcnn_combine':
+        model = DGCNN_Combine(args).to(device)
     else:
         raise Exception("Not implemented")
 
-    if args.model == 'pointnet_simple':
-        for name,m in model.named_modules():
-            if isinstance(m, (nn.Conv1d, nn.Linear)):
-                nn.init.xavier_uniform_(m.weight)
-                # nn.init.constant_(m.bias, 0.)
+    # if args.model == 'pointnet_simple':
+    #     for name,m in model.named_modules():
+    #         if isinstance(m, (nn.Conv1d, nn.Linear)):
+    #             nn.init.xavier_uniform_(m.weight)
+    #             # nn.init.constant_(m.bias, 0.)
                     
     print(str(model))
 
@@ -103,7 +82,7 @@ def train(args, io):
 
     if args.use_sgd:
         print("Use SGD")
-        opt = optim.SGD(model.parameters(), lr=args.lr*100, momentum=args.momentum, weight_decay=1e-4)
+        opt = optim.SGD(model.parameters(), lr=args.lr*100, momentum=args.momentum)
     else:
         print("Use Adam")
         opt = optim.Adam(model.parameters(), lr=args.lr)
@@ -131,71 +110,73 @@ def train(args, io):
         count = 0.0
         model.train()
 
-        if args.rotation or args.noise:
-            train_loss_rotation = 0.0
-            train_pred_rotation = []
-            train_true_rotation = []
-        if args.jigsaw:
-            train_loss_jigsaw = 0.0
-            train_pred_jigsaw = []
-            train_true_jigsaw = []
 
-        for aug_data, aug_label in train_loader:
+        train_loss_rotation = 0.0
+        train_pred_rotation = []
+        train_true_rotation = []
+
+        train_loss_jigsaw = 0.0
+        train_pred_jigsaw = []
+        train_true_jigsaw = []
+
+        for aug_data_1, aug_label_1, aug_data_2, aug_label_2 in train_loader:
             # print(rotated_data.shape)
             # print(rotation_label.shape)
             # data, label = data.to(device), label.to(device).squeeze()
-            batch_size, N, C = aug_data.size()
+            batch_size, N, C = aug_data_1.size()
 
-            aug_data = aug_data.permute(0, 2, 1)
-
-            if args.rotation or args.noise:
-                rotated_data, rotation_label = aug_data.to(device).float(), aug_label.to(device).squeeze()
-                if args.adversarial:
-                    rotated_data = attack.pgd_attack(model,rotated_data,rotation_label,eps=args.eps,alpha=args.alpha,iters=args.train_iter,mixup=False) 
-                    model.train()
-                opt.zero_grad()
-                logits_rotation,_,trans_feat = model(rotated_data)
-                loss_rotation = criterion(logits_rotation,trans_feat,rotation_label)
-                loss_rotation.backward()
-                opt.step()
-                # preds = logits.max(dim=1)[1]
-                count += batch_size 
-
-                preds_rotation = logits_rotation.max(dim=1)[1]
-                train_loss_rotation += loss_rotation.item() * batch_size
-                train_true_rotation.append(rotation_label.cpu().numpy())
-                train_pred_rotation.append(preds_rotation.detach().cpu().numpy())    
-
-            elif args.jigsaw:             
-                jigsaw_data, jigsaw_label = aug_data.to(device).float(), aug_label.to(device).squeeze().long()
-                if args.adversarial:
-                    jigsaw_data = attack.pgd_attack_seg(model,jigsaw_data,jigsaw_label,args.k1**3,eps=args.eps,alpha=args.alpha,iters=args.train_iter) 
-                    model.train()
-                opt.zero_grad()
-                logits_jigsaw,_,_ = model(jigsaw_data)
-                logits_jigsaw = logits_jigsaw.view(-1,args.k1**3)
-                jigsaw_label = jigsaw_label.view(-1,1)[:,0]
-                loss_jigsaw = F.nll_loss(logits_jigsaw,jigsaw_label)
-                loss_jigsaw.backward()
-                opt.step()
-                count += batch_size   
-
-                preds_jigsaw = logits_jigsaw.max(dim=1)[1]
-                train_loss_jigsaw += loss_jigsaw.item() * batch_size
-                train_true_jigsaw.append(jigsaw_label.cpu().numpy())
-                train_pred_jigsaw.append(preds_jigsaw.detach().cpu().numpy())
+            aug_data_1 = aug_data_1.permute(0, 2, 1)
+            aug_data_2 = aug_data_2.permute(0, 2, 1)
 
 
+            rotated_data, rotation_label = aug_data_1.to(device).float(), aug_label_1.to(device).squeeze()
+            if args.adversarial:
+                rotated_data = attack.pgd_attack(model,rotated_data,rotation_label,eps=args.eps,alpha=args.alpha,iters=args.train_iter,mixup=False) 
+                model.train()
+            opt.zero_grad()
+            logits_rotation,_,_ = model(rotated_data,True)
+            loss_rotation = criterion(logits_rotation,None,rotation_label)
+            # loss_rotation.backward()
+            # opt.step()
+            # preds = logits.max(dim=1)[1]
+            count += batch_size 
 
-        if args.rotation or args.noise:
-            train_true_rotation = np.concatenate(train_true_rotation)
-            train_pred_rotation = np.concatenate(train_pred_rotation)
-        if args.jigsaw:
-            train_true_jigsaw = np.concatenate(train_true_jigsaw)
-            train_pred_jigsaw = np.concatenate(train_pred_jigsaw)
+            preds_rotation = logits_rotation.max(dim=1)[1]
+            train_loss_rotation += loss_rotation.item() * batch_size
+            train_true_rotation.append(rotation_label.cpu().numpy())
+            train_pred_rotation.append(preds_rotation.detach().cpu().numpy())    
+
         
-        if args.rotation:
-            outstr = 'Train %d, loss_rotation: %.6f, train_rotation acc: %.6f, train_rotation avg acc: %.6f' % (epoch,
+            jigsaw_data, jigsaw_label = aug_data_2.to(device).float(), aug_label_2.to(device).squeeze().long()
+            if args.adversarial:
+                jigsaw_data = attack.pgd_attack_seg(model,jigsaw_data,jigsaw_label,args.k1**3,eps=args.eps,alpha=args.alpha,iters=args.train_iter) 
+                model.train()
+            opt.zero_grad()
+            logits_jigsaw,_,_ = model(jigsaw_data,False)
+            logits_jigsaw = logits_jigsaw.view(-1,args.k1**3)
+            jigsaw_label = jigsaw_label.view(-1,1)[:,0]
+            loss_jigsaw = F.nll_loss(logits_jigsaw,jigsaw_label)
+            
+            loss_total = args.lambda1 * loss_rotation + (1-args.lambda1) * loss_jigsaw
+            loss_total.backward()
+            opt.step()
+            # count += batch_size   
+
+            preds_jigsaw = logits_jigsaw.max(dim=1)[1]
+            train_loss_jigsaw += loss_jigsaw.item() * batch_size
+            train_true_jigsaw.append(jigsaw_label.cpu().numpy())
+            train_pred_jigsaw.append(preds_jigsaw.detach().cpu().numpy())
+
+
+
+
+        train_true_rotation = np.concatenate(train_true_rotation)
+        train_pred_rotation = np.concatenate(train_pred_rotation)
+        train_true_jigsaw = np.concatenate(train_true_jigsaw)
+        train_pred_jigsaw = np.concatenate(train_pred_jigsaw)
+        
+
+        outstr = 'Train %d, loss_rotation: %.6f, train_rotation acc: %.6f, train_rotation avg acc: %.6f' % (epoch,
                                                                                      train_loss_rotation*1.0/count,
                                                                                      metrics.accuracy_score(
                                                                                          train_true_rotation, train_pred_rotation),
@@ -203,17 +184,17 @@ def train(args, io):
                                                                                          train_true_rotation, train_pred_rotation)
 
                                                                                      )
-        elif args.noise:
-            outstr = 'Train %d, loss_noise: %.6f, train_noise acc: %.6f, train_noise avg acc: %.6f' % (epoch,
-                                                                                     train_loss_rotation*1.0/count,
-                                                                                     metrics.accuracy_score(
-                                                                                         train_true_rotation, train_pred_rotation),
-                                                                                     metrics.balanced_accuracy_score(
-                                                                                         train_true_rotation, train_pred_rotation)
+        io.cprint(outstr)
+        # elif args.noise:
+        #     outstr = 'Train %d, loss_noise: %.6f, train_noise acc: %.6f, train_noise avg acc: %.6f' % (epoch,
+        #                                                                              train_loss_rotation*1.0/count,
+        #                                                                              metrics.accuracy_score(
+        #                                                                                  train_true_rotation, train_pred_rotation),
+        #                                                                              metrics.balanced_accuracy_score(
+        #                                                                                  train_true_rotation, train_pred_rotation)
 
-                                                                                     )
-        elif args.jigsaw:
-            outstr = 'Train %d, loss_jigsaw: %.6f, train_jigsaw acc: %.6f, train_jigsaw avg acc: %.6f' % (epoch,
+        #                                                                              )
+        outstr = 'Train %d, loss_jigsaw: %.6f, train_jigsaw acc: %.6f, train_jigsaw avg acc: %.6f' % (epoch,
                                                                                      train_loss_jigsaw*1.0/count,
                                                                                      metrics.accuracy_score(
                                                                                          train_true_jigsaw, train_pred_jigsaw),
@@ -241,7 +222,7 @@ def train(args, io):
 def test(args, io,model=None, dataloader=None):
 
     if dataloader == None:
-        test_loader = DataLoader(PCData_SSL(name=args.dataset,partition='test', num_points=args.num_points, rotation=args.rotation, angles=args.angles, jigsaw=args.jigsaw, k=args.k1, 
+        test_loader = DataLoader(PCData_SSL(name=args.dataset,partition='test', num_points=args.num_points, combine=args.combine,rotation=args.rotation, angles=args.angles, jigsaw=args.jigsaw, k=args.k1, 
                              noise=args.noise, level=args.level), num_workers=8,
                              batch_size=args.test_batch_size, shuffle=False, drop_last=False)
     else:
@@ -251,118 +232,97 @@ def test(args, io,model=None, dataloader=None):
 
     #Try to load models
     if model is None:
-        if args.model == 'pointnet_rotation':
-            model = PointNet_Rotation(args).to(device)
-        elif args.model == 'dgcnn_rotation':
-            model = DGCNN_Rotation(args).to(device)
-        elif args.model == 'dgcnn_noise':
-            model = DGCNN_Noise(args).to(device)
-        elif args.model == 'pointnet_jigsaw':
-            model = PointNet_Jigsaw(args).to(device)
-        elif args.model == 'dgcnn_jigsaw':
-            model = DGCNN_Jigsaw(args).to(device)
-        elif args.model == 'deepsym_jigsaw':
-            model = DeepSym_Jigsaw(args).to(device)
-        elif args.model == 'deepsym_rotation':
-            model = DeepSym_Rotation(args).to(device)
-        elif args.model == 'pct_jigsaw':
-            model = Pct_Jigsaw(args).to(device)
-        elif args.model == 'pct_rotation':
-            model = Pct_Rotation(args).to(device)
-        elif args.model == 'pointnet_simple_rotation':
-            model = PointNet_Simple_Rotation(args).to(device)
-        elif args.model == 'pointnet_simple_jigsaw':
-            model = PointNet_Simple_Jigsaw(args).to(device)
+        if args.model == 'pointnet_simple_combine':
+            model = PointNet_Simple_Combine(args).to(device)
+        elif args.model == 'dgcnn_combine':
+            model = DGCNN_Combine(args).to(device)
         else:
             raise Exception("Not implemented")
         model = nn.DataParallel(model)
         model.load_state_dict(torch.load(args.model_path))
     model = model.eval()
     test_acc = 0.0
+    test_acc_2 = 0.0
     count = 0.0
     test_true = []
     test_pred = []
-    for data, label in test_loader:
+    test_true_2 = []
+    test_pred_2 = []
+    for data_1, label_1, data_2, label_2 in test_loader:
 
-        data, label = data.to(device).float(), label.to(device).squeeze()
-        data = data.permute(0, 2, 1)
-        batch_size = data.size()[0]
-        logits,trans,trans_feat = model(data)
-        if args.jigsaw:
-            logits = logits.view(-1,args.k1**3)
-            label = label.view(-1,1)[:,0]
-
+        data_1, label_1 = data_1.to(device).float(), label_1.to(device).squeeze()
+        data_1 = data_1.permute(0, 2, 1)
+        batch_size = data_1.size()[0]
+        logits,_,_ = model(data_1,True)
         preds = logits.max(dim=1)[1]
-        test_true.append(label.cpu().numpy())
+        test_true.append(label_1.cpu().numpy())
         test_pred.append(preds.detach().cpu().numpy())
+
+        data_2, label_2 = data_2.to(device).float(), label_2.to(device).squeeze()
+        data_2 = data_2.permute(0, 2, 1)
+        batch_size = data_2.size()[0]
+        logits,_,_ = model(data_2,False)
+        logits = logits.view(-1,args.k1**3)
+        label_2 = label_2.view(-1,1)[:,0]
+        preds = logits.max(dim=1)[1]
+        test_true_2.append(label_2.cpu().numpy())
+        test_pred_2.append(preds.detach().cpu().numpy())
+
+    
     test_true = np.concatenate(test_true)
     test_pred = np.concatenate(test_pred)
     test_acc = metrics.accuracy_score(test_true, test_pred)
     avg_per_class_acc = metrics.balanced_accuracy_score(test_true, test_pred)
-    outstr = 'Test :: test acc: %.6f, test avg acc: %.6f'%(test_acc, avg_per_class_acc)
+    outstr = 'Test Rotation:: test acc: %.6f, test avg acc: %.6f'%(test_acc, avg_per_class_acc)
+    io.cprint(outstr)
+    test_true_2 = np.concatenate(test_true_2)
+    test_pred_2 = np.concatenate(test_pred_2)
+    test_acc_2 = metrics.accuracy_score(test_true_2, test_pred_2)
+    avg_per_class_acc_2 = metrics.balanced_accuracy_score(test_true_2, test_pred_2)
+    outstr = 'Test Jigsaw:: test acc: %.6f, test avg acc: %.6f'%(test_acc_2, avg_per_class_acc_2)
     io.cprint(outstr)
 
 
-def adversarial(args,io,model=None, dataloader=None):
+# def adversarial(args,io,model=None, dataloader=None):
 
-    if dataloader == None:
-        test_loader = DataLoader(PCData_SSL(name=args.dataset,partition='test', num_points=args.num_points, rotation=args.rotation, angles=args.angles, jigsaw=args.jigsaw, k=args.k1,
-                             noise=args.noise, level=args.level), num_workers=8,
-                             batch_size=args.test_batch_size, shuffle=False, drop_last=False)
-    else:
-        test_loader = dataloader
+#     if dataloader == None:
+#         test_loader = DataLoader(PCData_SSL(name=args.dataset,partition='test', num_points=args.num_points, rotation=args.rotation, angles=args.angles, jigsaw=args.jigsaw, k=args.k1,
+#                              noise=args.noise, level=args.level), num_workers=8,
+#                              batch_size=args.test_batch_size, shuffle=False, drop_last=False)
+#     else:
+#         test_loader = dataloader
 
-    device = torch.device("cuda" if args.cuda else "cpu")
+#     device = torch.device("cuda" if args.cuda else "cpu")
 
-    #Try to load models
-    if model is None:
-        if args.model == 'pointnet_rotation':
-            model = PointNet_Rotation(args).to(device)
-        elif args.model == 'dgcnn_rotation':
-            model = DGCNN_Rotation(args).to(device)
-        elif args.model == 'dgcnn_noise':
-            model = DGCNN_Noise(args).to(device)
-        elif args.model == 'pointnet_jigsaw':
-            model = PointNet_Jigsaw(args).to(device)
-        elif args.model == 'dgcnn_jigsaw':
-            model = DGCNN_Jigsaw(args).to(device)
-        elif args.model == 'deepsym_jigsaw':
-            model = DeepSym_Jigsaw(args).to(device)
-        elif args.model == 'deepsym_rotation':
-            model = DeepSym_Rotation(args).to(device)
-        elif args.model == 'pct_jigsaw':
-            model = Pct_Jigsaw(args).to(device)
-        elif args.model == 'pct_rotation':
-            model = Pct_Rotation(args).to(device)
-        elif args.model == 'pointnet_simple_rotation':
-            model = PointNet_Simple_Rotation(args).to(device)
-        elif args.model == 'pointnet_simple_jigsaw':
-            model = PointNet_Simple_Jigsaw(args).to(device)
-        else:
-            raise Exception("Not implemented")
-        model = nn.DataParallel(model)
-        model.load_state_dict(torch.load(args.model_path))
+#     #Try to load models
+#     if model is None:
+#         if args.model == 'pointnet_simple_combine':
+#             model = PointNet_Simple_Combine(args).to(device)
+#         else:
+#             raise Exception("Not implemented")
+#         model = nn.DataParallel(model)
+#         model.load_state_dict(torch.load(args.model_path))
 
-    model = model.eval()
-    test_acc = 0.0
-    count = 0.0
-    test_true = []
-    test_pred = []
-    for data, label in test_loader:
-        data, label = data.to(device).float(), label.to(device).squeeze()
-        data = data.permute(0, 2, 1)
-        batch_size = data.size()[0]
-        adv_data = attack.pgd_attack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,repeat=1,mixup=False)
-        logits,trans,trans_feat = model(adv_data)
-        preds = logits.max(dim=1)[1]
-        test_true.append(label.cpu().numpy())
-        test_pred.append(preds.detach().cpu().numpy())
-    test_true = np.concatenate(test_true)
-    test_pred = np.concatenate(test_pred)
-    test_acc = metrics.accuracy_score(test_true, test_pred)
-    avg_per_class_acc = metrics.balanced_accuracy_score(test_true, test_pred)
-    outstr = 'Adversarial :: ADV_test acc: %.6f, ADV_test avg acc: %.6f'%(test_acc, avg_per_class_acc)
-    io.cprint(outstr)
+#     model = model.eval()
+#     test_acc = 0.0
+#     count = 0.0
+#     test_true = []
+#     test_pred = []
+#     for data, label in test_loader:
+#         data, label = data.to(device).float(), label.to(device).squeeze()
+#         data = data.permute(0, 2, 1)
+#         batch_size = data.size()[0]
+#         adv_data = attack.pgd_attack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,repeat=1,mixup=False)
+#         logits,trans,trans_feat = model(adv_data)
+#         preds = logits.max(dim=1)[1]
+#         test_true.append(label.cpu().numpy())
+#         test_pred.append(preds.detach().cpu().numpy())
+#     test_true = np.concatenate(test_true)
+#     test_pred = np.concatenate(test_pred)
+#     test_acc = metrics.accuracy_score(test_true, test_pred)
+#     avg_per_class_acc = metrics.balanced_accuracy_score(test_true, test_pred)
+#     outstr = 'Adversarial :: ADV_test acc: %.6f, ADV_test avg acc: %.6f'%(test_acc, avg_per_class_acc)
+#     io.cprint(outstr)
 
 
 if __name__ == "__main__":
@@ -372,9 +332,8 @@ if __name__ == "__main__":
                         help='Name of the experiment')
     parser.add_argument('--exp_name', type=str, default='exp', metavar='N',
                         help='Name of the experiment')
-    parser.add_argument('--model', type=str, default='dgcnn', metavar='N',
-                        choices=['pointnet_rotation', 'dgcnn_rotation', 'pointnet_jigsaw', 'dgcnn_jigsaw', 'deepsym_jigsaw', 'deepsym_rotation','pct_rotation',
-                            'pct_jigsaw','pointnet_simple_rotation','pointnet_simple_jigsaw','dgcnn_noise'],
+    parser.add_argument('--model', type=str, default='pointnet_simple_combine', metavar='N',
+                        choices=['pointnet_simple_combine','dgcnn_combine'],
                         help='Model to use, [pointnet, dgcnn]')
     parser.add_argument('--dataset', type=str, default='modelnet40', metavar='N')
     parser.add_argument('--batch_size', type=int, default=32, metavar='batch_size',
@@ -419,6 +378,8 @@ if __name__ == "__main__":
                         help="Which gpu to use")
     parser.add_argument('--rotation',type=bool,default=False,
                         help="Whether to use rotation")
+    parser.add_argument('--combine',type=bool,default=False,
+                        help="Whether to use combine")
     parser.add_argument('--noise',type=bool,default=False,
                         help="Whether to use noise")
     parser.add_argument('--jigsaw',type=bool,default=False,
@@ -433,6 +394,8 @@ if __name__ == "__main__":
                         help='Hyper-parameter noise level')
     parser.add_argument('--scheduler',type=str,default='default',
                         help="Which lr scheduler to use")
+    parser.add_argument('--lambda1',type=float,default=1.,
+                        help="Hyper-parameter lambda")
     args = parser.parse_args()
 
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
@@ -461,19 +424,4 @@ if __name__ == "__main__":
         io.cprint("Training took %.6f hours" % ((end - start)/3600))
     else:
         pass
-        # EPS=args.eps
-        # ALPHA=args.alpha
-        # TEST_ITER=args.test_iter
-        # adversarial(args,io,model=model)
-    # start = time.time()
-    # if args.model != 'set_transformer': 
-    #     saliency_map(args,io,model=model)
-    # test(args, io,model=model)
-    # TEST_ITER=args.test_iter
-    # for eps in [0.025,0.05,0.075,0.1]:
-    #     print("EPS:",eps)
-    #     EPS=eps
-    #     ALPHA=eps/10
-    #     adversarial(args,io,model=model)
-    # end = time.time()
-    # io.cprint("Evaluation took %.6f hours" % ((end - start)/3600))
+

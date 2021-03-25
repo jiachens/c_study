@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-02-16 21:25:32
 LastEditors: Jiachen Sun
-LastEditTime: 2021-03-17 15:51:16
+LastEditTime: 2021-03-23 20:59:18
 '''
 
 import os
@@ -22,6 +22,19 @@ import torch.nn.functional as F
 from util import sample_and_group 
 from torch.autograd import Variable
 from modules import ISAB, PMA, SAB
+
+class Dual_BN(nn.Module):
+    def __init__(self, num_channels,eps=1e-3):
+        super().__init__()
+        self.bn = nn.BatchNorm1d(num_channels,eps=eps)
+        self.bn_ssl = nn.BatchNorm1d(num_channels,eps=eps)
+
+    def forward(self,x,flag = False):
+        if flag:
+            x = self.bn_ssl(x)
+        else:
+            x = self.bn(x)
+        return x
 
 class DeepSym(nn.Module):
     def __init__(self, args, output_channels=40):
