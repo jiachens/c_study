@@ -26,6 +26,7 @@ from util import cal_loss, IOStream, cross_entropy_with_probs,trades_loss
 import sklearn.metrics as metrics
 import attack
 import time
+import model_combine
 # EPS=0.05
 # ALPHA=0.01
 # TRAIN_ITER=7
@@ -77,10 +78,14 @@ def train(args, io):
     #Try to load models
     if args.model == 'pointnet':
         model = PointNet(args,output_channels=output_channel).to(device)
-    elif args.model == 'dgcnn':
+    elif args.model == 'dgcnn' and args.combine:
+        model = model_combine.DGCNN(args,output_channels=output_channel).to(device)
+    elif args.model == 'dgcnn' and  not args.combine:
         model = DGCNN(args,output_channels=output_channel).to(device)
-    elif args.model == 'pointnet_simple':
-        model = PointNet_Simple(args,output_channels=output_channel).to(device)
+    elif args.model == 'pointnet_simple' and args.combine:
+        model =  model_combine.PointNet_Simple(args,output_channels=output_channel).to(device)
+    elif args.model == 'pointnet_simple' and  not args.combine:
+        model =  PointNet_Simple(args,output_channels=output_channel).to(device)
     elif args.model == 'pct':
         model = Pct(args,output_channels=output_channel).to(device)
     elif args.model == 'deepsym':
@@ -393,6 +398,8 @@ if __name__ == "__main__":
                         help="Which gpu to use")
     parser.add_argument('--rotation',type=bool,default=False,
                         help="Whether to use rotation")
+    parser.add_argument('--combine',type=bool,default=False,
+                        help="Whether to use combine")
     parser.add_argument('--jigsaw',type=bool,default=False,
                         help="Whether to use jigsaw")
     parser.add_argument('--model_path', type=str, default='', metavar='N',

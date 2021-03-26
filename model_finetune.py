@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-02-16 21:25:32
 LastEditors: Jiachen Sun
-LastEditTime: 2021-03-23 20:59:18
+LastEditTime: 2021-03-25 19:42:52
 '''
 
 import os
@@ -1052,9 +1052,6 @@ class DGCNN(nn.Module):
         super(DGCNN, self).__init__()
         self.args = args
         self.k = args.k
-        # self.FSPool_local=args.fspool_local
-        # self.FSPool_global = args.fspool_global
-        # self.MLPPool_global = args.mlppool_global
         self.bn1 = nn.BatchNorm2d(64)
         self.bn2 = nn.BatchNorm2d(64)
         self.bn3 = nn.BatchNorm2d(128)
@@ -1085,30 +1082,11 @@ class DGCNN(nn.Module):
 
         self.linear100 = nn.Linear(256, output_channels)
 
-        # if args.rotation:
-        #     self.linear4 = nn.Linear(args.emb_dims*2, 512, bias=False)
-        #     self.bn8 = nn.BatchNorm1d(512)
-        #     self.dp3 = nn.Dropout(p=args.dropout)
-        #     self.linear5 = nn.Linear(512, 256)
-        #     self.bn9 = nn.BatchNorm1d(256)
-        #     self.dp4 = nn.Dropout(p=args.dropout)
-        #     self.linear6 = nn.Linear(256, args.angles)
-        
-        # if(self.FSPool_local):
-        #     self.pool1 = FSPOOL(64,args.k)
-        #     self.pool2 = FSPOOL(64,args.k)
-        #     self.pool3 = FSPOOL(128,args.k)
-        #     self.pool4 = FSPOOL(256,args.k)
-        # else:
         self.pool1 = MAXPOOL()
         self.pool2 = MAXPOOL()
         self.pool3 = MAXPOOL()
         self.pool4 = MAXPOOL()
-        # if(self.FSPool_global):
-        #     self.pool5 = FSPOOL(1024,1024)
-        #     self.pool6 = FSPOOL(1024,1024)
-        # elif(self.MLPPool_global):
-        # self.pool5 = MLPPool(1024,2,1024)
+
     
     def forward(self, x):
         batch_size = x.size(0)
@@ -1132,14 +1110,6 @@ class DGCNN(nn.Module):
 
         x = self.conv5(x)
 
-        # if(self.FSPool_global):
-        #     x = x.unsqueeze(2)
-        #     x1 = self.pool5(x).view(batch_size,-1)
-        #     x2 = self.pool6(x).view(batch_size,-1)
-        #     x = torch.cat((x1, x2), 1)
-        # elif(self.MLPPool_global):
-        #     x = self.pool5(x)
-        # else:
         x1 = F.adaptive_max_pool1d(x, 1).view(batch_size, -1)
         x2 = F.adaptive_avg_pool1d(x, 1).view(batch_size, -1)
         x = torch.cat((x1, x2), 1)
@@ -1150,12 +1120,7 @@ class DGCNN(nn.Module):
         x = F.leaky_relu(self.bn7(self.linear2(x)), negative_slope=0.2)
         x = self.dp2(x)
         x = self.linear100(x)
-        # else:
-        #     x = F.leaky_relu(self.bn8(self.linear4(x)), negative_slope=0.2)
-        #     x = self.dp3(x)
-        #     x = F.leaky_relu(self.bn9(self.linear5(x)), negative_slope=0.2)
-        #     x = self.dp4(x)
-        #     x = self.linear6(x)
+
         return x, None, None
 
 class DGCNN_Rotation(nn.Module):
