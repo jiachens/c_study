@@ -132,6 +132,8 @@ def train(args, io):
         scheduler = CosineAnnealingLR(opt, args.epochs, eta_min=0.00001)
     elif args.scheduler == 'piecewise':
         scheduler = MultiStepLR(opt, milestones=[100,150,200], gamma=0.1)
+    elif args.scheduler == 'piecewise_1':
+        scheduler = MultiStepLR(opt, milestones=[40,80,120], gamma=0.1)
     elif args.scheduler == 'pct':
         scheduler = CosineAnnealingLR(opt, args.epochs, eta_min=args.lr)
 
