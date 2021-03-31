@@ -5,7 +5,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-02-16 17:42:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-03-24 21:14:57
+LastEditTime: 2021-03-30 21:45:20
 '''
 
 
@@ -18,7 +18,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import CosineAnnealingLR, ExponentialLR, StepLR, MultiStepLR, ReduceLROnPlateau
 from data import PCData_SSL, PCData, PCData_Jigsaw
-from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, DGCNN_Jigsaw, DeepSym_Rotation, DeepSym_Jigsaw, Pct_Jigsaw, Pct_Rotation, PointNet_Simple_Rotation, PointNet_Simple_Jigsaw, DGCNN_Noise
+from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, DGCNN_Jigsaw, DeepSym_Rotation, DeepSym_Jigsaw, Pct_Jigsaw, Pct_Rotation, PointNet_Simple_Rotation, PointNet_Simple_Jigsaw, DGCNN_Noise, PointNet_Simple_Noise
 import numpy as np
 from torch.utils.data import DataLoader
 import sys

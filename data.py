@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-03-24 22:15:59
+LastEditTime: 2021-03-30 21:48:40
 '''
 
 import os
@@ -585,7 +585,7 @@ def generate_jigsaw_data_label(pointcloud, k):
 
 def add_noise(pointcloud, label, level):
     N, C = pointcloud.shape
-    jitter = label * (0.05 / (level-1)) * np.random.uniform(-1,1,(N, C))
+    jitter = label * (0.05 / (level-1)) * np.sign(np.random.uniform(-1,1,(N, C)))
     new_pc = (pointcloud + jitter).astype('float32')
 
     ##### NORMALIZE #####
