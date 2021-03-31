@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-02-16 21:25:32
 LastEditors: Jiachen Sun
-LastEditTime: 2021-03-30 21:50:17
+LastEditTime: 2021-03-31 00:08:14
 '''
 
 import os
@@ -836,7 +836,7 @@ class PointNet_Simple_Rotation(nn.Module):
 
 class PointNet_Simple_Noise(nn.Module):
     def __init__(self, args, output_channels=40):
-        super(PointNet_Simple_Rotation, self).__init__()
+        super(PointNet_Simple_Noise, self).__init__()
         self.args = args
         #self.stn = STN3d()
         #self.fstn = STNkd(k=64)

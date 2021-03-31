@@ -5,7 +5,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-02-16 17:42:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-03-30 21:45:20
+LastEditTime: 2021-03-31 00:09:28
 '''
 
 
@@ -87,6 +87,8 @@ def train(args, io):
         model = PointNet_Simple_Rotation(args).to(device)
     elif args.model == 'pointnet_simple_jigsaw':
         model = PointNet_Simple_Jigsaw(args).to(device)
+    elif args.model == 'pointnet_simple_noise':
+        model = PointNet_Simple_Noise(args).to(device)
     else:
         raise Exception("Not implemented")
 
@@ -273,6 +275,8 @@ def test(args, io,model=None, dataloader=None):
             model = PointNet_Simple_Rotation(args).to(device)
         elif args.model == 'pointnet_simple_jigsaw':
             model = PointNet_Simple_Jigsaw(args).to(device)
+        elif args.model == 'pointnet_simple_noise':
+            model = PointNet_Simple_Noise(args).to(device)
         else:
             raise Exception("Not implemented")
         model = nn.DataParallel(model)
@@ -338,6 +342,8 @@ def adversarial(args,io,model=None, dataloader=None):
             model = PointNet_Simple_Rotation(args).to(device)
         elif args.model == 'pointnet_simple_jigsaw':
             model = PointNet_Simple_Jigsaw(args).to(device)
+        elif args.model == 'pointnet_simple_noise':
+            model = PointNet_Simple_Noise(args).to(device)
         else:
             raise Exception("Not implemented")
         model = nn.DataParallel(model)
@@ -374,7 +380,7 @@ if __name__ == "__main__":
                         help='Name of the experiment')
     parser.add_argument('--model', type=str, default='dgcnn', metavar='N',
                         choices=['pointnet_rotation', 'dgcnn_rotation', 'pointnet_jigsaw', 'dgcnn_jigsaw', 'deepsym_jigsaw', 'deepsym_rotation','pct_rotation',
-                            'pct_jigsaw','pointnet_simple_rotation','pointnet_simple_jigsaw','dgcnn_noise'],
+                            'pct_jigsaw','pointnet_simple_rotation','pointnet_simple_jigsaw','dgcnn_noise','pointnet_simple_noise'],
                         help='Model to use, [pointnet, dgcnn]')
     parser.add_argument('--dataset', type=str, default='modelnet40', metavar='N')
     parser.add_argument('--batch_size', type=int, default=32, metavar='batch_size',
