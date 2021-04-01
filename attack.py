@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-01 01:36:15
+LastEditTime: 2021-04-01 15:22:21
 '''
 
 import torch
@@ -111,16 +111,16 @@ def spsa(model,data,labels_og,eps=0.01,alpha=0.001,iters=2000,samples=32):
                 est_g = torch.zeros_like(adv_data)
                 for j in range(samples // BATCH_SIZE):
                     adv_data_repeat = adv_data.repeat([BATCH_SIZE,1,1])
-                    pert = torch.rand_like(adv_data_repeat)*2 - 1
-                    adv_data_repeat_1 = adv_data_repeat + pert * eps
+                    pert = torch.rand_like(adv_data_repeat) * 2 - 1
+                    adv_data_repeat_1 = adv_data_repeat + pert.sign() * eps
                     logits_1,_,_ = model(adv_data_repeat_1)
                     loss_1 = cal_loss(logits_1,None,labels)
 
-                    adv_data_repeat_2 = adv_data_repeat - pert * eps
+                    adv_data_repeat_2 = adv_data_repeat - pert.sign() * eps
                     logits_2,_,_ = model(adv_data_repeat_2)
                     loss_2 = cal_loss(logits_2,None,labels)
 
-                    est_g += torch.sum((loss_1 - loss_2) * pert / (2 * eps),0)
+                    est_g += torch.sum((loss_1 - loss_2) / (2 * eps * pert.sign()),0)
                 
                 est_g = est_g / samples
                 adv_data = adv_data + alpha * est_g.sign()
