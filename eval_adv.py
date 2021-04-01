@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-03-29 21:31:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-01 15:26:44
+LastEditTime: 2021-04-01 16:17:00
 '''
 from __future__ import print_function
 import os
@@ -165,7 +165,7 @@ if __name__ == "__main__":
                         help='Pretrained model path')
     parser.add_argument('--attack', type=str, default='pgd', metavar='N',
                         help='Attack method')
-    parser.add_argument('--samples', type=str, default='pgd', metavar='N',
+    parser.add_argument('--samples', type=int, default=64, 
                         help='black box samples')
 
     args = parser.parse_args()
