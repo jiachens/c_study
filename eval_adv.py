@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-03-29 21:31:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-01 01:42:38
+LastEditTime: 2021-04-01 15:26:44
 '''
 from __future__ import print_function
 import os
@@ -98,11 +98,11 @@ def adversarial(args,io,model=None, dataloader=None):
         if args.attack == 'pgd':
             adv_data = attack.pgd_attack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,repeat=1,mixup=False)
         elif args.attack == 'nattack':
-            adv_data = attack.nattack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,variance=0.1,samples=64)
+            adv_data = attack.nattack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,variance=0.1,samples=args.samples)
         elif args.attack == 'spsa':
-            adv_data = attack.spsa(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,samples=64)
+            adv_data = attack.spsa(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,samples=args.samples)
         elif args.attack == 'nes':
-            adv_data = attack.nes(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,variance=0.001,samples=64)
+            adv_data = attack.nes(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,variance=0.001,samples=args.samples)
         
         print(adv_data - data)
         logits,trans,trans_feat = model(adv_data)
@@ -165,6 +165,8 @@ if __name__ == "__main__":
                         help='Pretrained model path')
     parser.add_argument('--attack', type=str, default='pgd', metavar='N',
                         help='Attack method')
+    parser.add_argument('--samples', type=str, default='pgd', metavar='N',
+                        help='black box samples')
 
     args = parser.parse_args()
 
