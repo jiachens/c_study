@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-03-29 21:31:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-01 00:57:15
+LastEditTime: 2021-04-01 01:42:38
 '''
 from __future__ import print_function
 import os
@@ -88,7 +88,7 @@ def adversarial(args,io,model=None, dataloader=None):
     test_acc = 0.0
     test_true = []
     test_pred = []
-    total = 256
+    total = 255
     counter = 0
     for data, label,_,_ in test_loader:
         data, label = data.to(device).float(), label.to(device).long().squeeze()
@@ -103,13 +103,14 @@ def adversarial(args,io,model=None, dataloader=None):
             adv_data = attack.spsa(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,samples=64)
         elif args.attack == 'nes':
             adv_data = attack.nes(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,variance=0.001,samples=64)
-            
+        
+        print(adv_data - data)
         logits,trans,trans_feat = model(adv_data)
         preds = logits.max(dim=1)[1]
         counter += batch_size
         test_true.append(label.cpu().numpy())
         test_pred.append(preds.detach().cpu().numpy())
-        if counter > total:
+        if counter >= total:
             break
     test_true = np.concatenate(test_true)
     test_pred = np.concatenate(test_pred)

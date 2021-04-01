@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-03-31 22:32:55
+LastEditTime: 2021-04-01 01:36:15
 '''
 
 import torch
@@ -114,7 +114,6 @@ def spsa(model,data,labels_og,eps=0.01,alpha=0.001,iters=2000,samples=32):
                     pert = torch.rand_like(adv_data_repeat)*2 - 1
                     adv_data_repeat_1 = adv_data_repeat + pert * eps
                     logits_1,_,_ = model(adv_data_repeat_1)
-                    # print(logits_1.shape)
                     loss_1 = cal_loss(logits_1,None,labels)
 
                     adv_data_repeat_2 = adv_data_repeat - pert * eps
@@ -186,7 +185,7 @@ def nattack(model,data,labels_og,eps=0.01,alpha=0.001,iters=2000,variance=0.001,
     
     return final_adv.cuda()
 
-def nes(model,data,labels_og,eps=0.01,alpha=0.001,iters=2000,variance=0.001,samples=32):
+def nes(model,data,labels_og,eps=0.01,alpha=0.001,iters=2000,variance=0.1,samples=32):
 
     model.eval()
     final_adv = []
