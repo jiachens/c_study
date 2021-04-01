@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-03-29 21:31:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-03-29 21:46:27
+LastEditTime: 2021-04-01 00:41:01
 '''
 from __future__ import print_function
 import os
@@ -86,24 +86,37 @@ def adversarial(args,io,model=None, dataloader=None):
 
     model = model.eval()
     test_acc = 0.0
-    count = 0.0
     test_true = []
     test_pred = []
+    total = 256
+    counter = 0
     for data, label,_,_ in test_loader:
         data, label = data.to(device).float(), label.to(device).long().squeeze()
         data = data.permute(0, 2, 1)
         batch_size = data.size()[0]
-        adv_data = attack.pgd_attack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,repeat=1,mixup=False)
+
+        if args.attack == 'pgd':
+            adv_data = attack.pgd_attack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,repeat=1,mixup=False)
+        elif args.attack == 'nattack':
+            adv_data = attack.nattack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,variance=0.1,samples=64)
+        elif args.attack == 'spsa':
+            adv_data = attack.spsa(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,samples=64)
+        elif args.attack == 'nes':
+            adv_data = attack.nes(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,variance=0.001,samples=64)
+            
         logits,trans,trans_feat = model(adv_data)
         preds = logits.max(dim=1)[1]
+        counter += batch_size
         test_true.append(label.cpu().numpy())
         test_pred.append(preds.detach().cpu().numpy())
+        if counter > total:
+            break
     test_true = np.concatenate(test_true)
     test_pred = np.concatenate(test_pred)
     test_acc = metrics.accuracy_score(test_true, test_pred)
     avg_per_class_acc = metrics.balanced_accuracy_score(test_true, test_pred)
-    outstr = 'Adversarial :: ADV_test acc: %.6f, ADV_test avg acc: %.6f'%(test_acc, avg_per_class_acc)
-    io.cprint(outstr)
+    outstr = ' Adversarial :: ADV_test acc: %.6f, ADV_test avg acc: %.6f'%(test_acc, avg_per_class_acc)
+    io.cprint(args.attack + outstr)
     return test_acc
 
 if __name__ == "__main__":
@@ -149,6 +162,8 @@ if __name__ == "__main__":
                         help="Which gpu to use")
     parser.add_argument('--model_path', type=str, default='', metavar='N',
                         help='Pretrained model path')
+    parser.add_argument('--attack', type=str, default='pgd', metavar='N',
+                        help='Attack method')
 
     args = parser.parse_args()
 
