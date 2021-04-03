@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-02 21:27:39
+LastEditTime: 2021-04-02 21:53:11
 '''
 
 import torch
@@ -14,7 +14,7 @@ torch.cuda.manual_seed_all(666)
 torch.backends.cudnn.deterministic=True
 torch.backends.cudnn.benchmark = False
 import torch.nn.functional as F
-from util import cross_entropy_with_probs, cal_loss
+from util import cross_entropy_with_probs, cal_loss, margin_logit_loss
  
 def pgd_attack(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=False):
     model.eval()
@@ -115,11 +115,11 @@ def spsa(model,data,labels_og,eps=0.01,alpha=0.001,iters=2000,samples=32):
                     pert = torch.rand_like(adv_data_repeat) - 0.5
                     adv_data_repeat_1 = adv_data_repeat + pert.sign() * eps
                     logits_1,_,_ = model(adv_data_repeat_1)
-                    loss_1 = cal_loss(logits_1,None,labels)
+                    loss_1 = margin_logit_loss(logits_1,labels)
 
                     adv_data_repeat_2 = adv_data_repeat - pert.sign() * eps
                     logits_2,_,_ = model(adv_data_repeat_2)
-                    loss_2 = cal_loss(logits_2,None,labels)
+                    loss_2 = margin_logit_loss(logits_2,labels)
 
                     est_g += torch.sum((loss_1 - loss_2) / (2 * eps * pert.sign()),0)
                 
@@ -165,7 +165,7 @@ def nattack(model,data,labels_og,eps=0.01,alpha=0.001,iters=2000,variance=0.001,
                     delta = torch.clamp(delta,-eps,eps)
                     adv_data_repeat_1 = adv_data_repeat + delta
                     logits,_,_ = model(adv_data_repeat_1)
-                    loss = cal_loss(logits,None,labels)
+                    loss = margin_logit_loss(logits,labels)
                     loss_sum += torch.sum(loss,0)
                     loss_all.append(loss)
                     perts_sum += torch.sum(pert,0)
@@ -207,11 +207,11 @@ def nes(model,data,labels_og,eps=0.01,alpha=0.001,iters=2000,variance=0.1,sample
                     
                     adv_data_repeat_1 = adv_data_repeat + pert * variance
                     logits_1,_,_ = model(adv_data_repeat_1)
-                    loss_1 = cal_loss(logits_1,None,labels)
+                    loss_1 = margin_logit_loss(logits_1,labels)
 
                     adv_data_repeat_2 = adv_data_repeat - pert * variance
                     logits_2,_,_ = model(adv_data_repeat_2)
-                    loss_2 = cal_loss(logits_2,None,labels)
+                    loss_2 = margin_logit_loss(logits_2,labels)
 
                     est_g += torch.sum((loss_1 - loss_2) * pert / (2 * variance),0)
                 

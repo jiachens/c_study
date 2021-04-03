@@ -5,7 +5,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-03-01 14:33:28
+LastEditTime: 2021-04-02 21:50:55
 '''
 
 
@@ -280,6 +280,28 @@ def knn_point(nsample, xyz, new_xyz):
     sqrdists = square_distance(new_xyz, xyz)
     _, group_idx = torch.topk(sqrdists, nsample, dim = -1, largest=False, sorted=False)
     return group_idx
+
+def margin_logit_loss(logits, labels):
+    """
+    Computes difference between logits for `labels` and next highest logits.
+    The loss is high when `label` is unlikely (targeted by default).
+    """
+
+    correct_logits = logits.gather(1, labels[:, None]).squeeze(1)
+
+    logit_indices = torch.arange(
+        logits.size()[1],
+        dtype=labels.dtype,
+        device=labels.device,
+    )[None, :].expand(labels.size()[0], -1)
+    incorrect_logits = torch.where(
+        logit_indices == labels[:, None],
+        torch.full_like(logits, float("-inf")),
+        logits,
+    )
+    max_incorrect_logits, _ = torch.max(incorrect_logits, 1)
+
+    return max_incorrect_logits - correct_logits
 
 def sample_and_group(npoint, radius, nsample, xyz, points):
     """
