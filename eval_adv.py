@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-03-29 21:31:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-02 21:39:29
+LastEditTime: 2021-04-03 14:38:48
 '''
 from __future__ import print_function
 import os
@@ -88,7 +88,7 @@ def adversarial(args,io,model=None, dataloader=None):
     test_acc = 0.0
     test_true = []
     test_pred = []
-    total = 100
+    total = args.total
     counter = 0
     for data, label,_,_ in test_loader:
         data, label = data.to(device).float(), label.to(device).long().squeeze()
@@ -157,6 +157,8 @@ if __name__ == "__main__":
                         help="Adversarial training perturbation step size")
     parser.add_argument('--test_iter',type=int,default=200,
                         help="Number of steps taken to create adversarial test inputs")
+    parser.add_argument('--total',type=int,default=1000,
+                        help="Number of samples to evaluate")
     parser.add_argument('--adversarial',type=bool,default=False,
                         help="Whether to use adversarial examples")
     parser.add_argument('--gpu',type=str,default='0',

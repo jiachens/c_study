@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-02 23:04:54
+LastEditTime: 2021-04-03 14:43:16
 '''
 
 import torch
@@ -104,10 +104,10 @@ def spsa(model,data,labels_og,eps=0.01,alpha=0.001,iters=2000,samples=32):
         BATCH_SIZE = data.shape[0]
         for b in range(BATCH_SIZE):
             adv_data=torch.squeeze(data[b].clone())
-            adv_data=adv_data+(torch.rand_like(adv_data)*eps*2-eps)
             labels = torch.ones_like(labels_og) * labels_og[b]
             adv_data.detach()
             adv_data_og =  adv_data.clone()
+            adv_data=adv_data+(torch.rand_like(adv_data)*eps*2-eps)
             for _ in range(iters):
                 est_g = torch.zeros_like(adv_data)
                 for j in range(samples // BATCH_SIZE):
@@ -142,10 +142,10 @@ def nattack(model,data,labels_og,eps=0.01,alpha=0.001,iters=2000,variance=0.001,
         BATCH_SIZE = data.shape[0]
         for b in range(BATCH_SIZE):
             adv_data=torch.squeeze(data[b].clone())
-            adv_data=adv_data+(torch.rand_like(adv_data)*eps*2-eps)
             labels = torch.ones_like(labels_og) * labels_og[b]
             adv_data.detach()
             adv_data_og =  adv_data.clone()
+            adv_data=adv_data+(torch.rand_like(adv_data)*eps*2-eps)
             mu = torch.zeros_like(adv_data_og)
             
             for _ in range(iters):
@@ -196,10 +196,10 @@ def nes(model,data,labels_og,eps=0.01,alpha=0.001,iters=2000,variance=0.1,sample
         BATCH_SIZE = data.shape[0]
         for b in range(BATCH_SIZE):
             adv_data=torch.squeeze(data[b].clone())
-            adv_data=adv_data+(torch.rand_like(adv_data)*eps*2-eps)
             labels = torch.ones_like(labels_og) * labels_og[b]
             adv_data.detach()
             adv_data_og =  adv_data.clone()
+            adv_data=adv_data+(torch.rand_like(adv_data)*eps*2-eps)
             for _ in range(iters):
                 est_g = torch.zeros_like(adv_data)
                 for j in range(samples // BATCH_SIZE):
