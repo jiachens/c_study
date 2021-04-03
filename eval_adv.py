@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-03-29 21:31:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-02 21:35:33
+LastEditTime: 2021-04-02 21:39:29
 '''
 from __future__ import print_function
 import os
@@ -173,7 +173,7 @@ if __name__ == "__main__":
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     _init_()
     print(args.adversarial)
-    io = IOStream(args.pre_path+'finetune_checkpoints/' + args.exp_name + '/run_' + str(args.epochs) + '_' + args.attack + '.log')
+    io = IOStream(args.pre_path+'finetune_checkpoints/' + args.exp_name + '/run_' + str(args.epochs) + '_' + args.attack + '_' + str(args.test_iter) + '.log')
     io.cprint(str(args))
 
     args.cuda = not args.no_cuda and torch.cuda.is_available()
