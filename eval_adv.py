@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-03-29 21:31:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-01 16:17:00
+LastEditTime: 2021-04-02 21:35:33
 '''
 from __future__ import print_function
 import os
@@ -88,7 +88,7 @@ def adversarial(args,io,model=None, dataloader=None):
     test_acc = 0.0
     test_true = []
     test_pred = []
-    total = 255
+    total = 100
     counter = 0
     for data, label,_,_ in test_loader:
         data, label = data.to(device).float(), label.to(device).long().squeeze()

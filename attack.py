@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-01 15:22:21
+LastEditTime: 2021-04-02 21:27:39
 '''
 
 import torch
@@ -104,6 +104,7 @@ def spsa(model,data,labels_og,eps=0.01,alpha=0.001,iters=2000,samples=32):
         BATCH_SIZE = data.shape[0]
         for b in range(BATCH_SIZE):
             adv_data=torch.squeeze(data[b].clone())
+            adv_data=adv_data+(torch.rand_like(adv_data)*eps*2-eps)
             labels = torch.ones_like(labels_og) * labels_og[b]
             adv_data.detach()
             adv_data_og =  adv_data.clone()
@@ -111,7 +112,7 @@ def spsa(model,data,labels_og,eps=0.01,alpha=0.001,iters=2000,samples=32):
                 est_g = torch.zeros_like(adv_data)
                 for j in range(samples // BATCH_SIZE):
                     adv_data_repeat = adv_data.repeat([BATCH_SIZE,1,1])
-                    pert = torch.rand_like(adv_data_repeat) * 2 - 1
+                    pert = torch.rand_like(adv_data_repeat) - 0.5
                     adv_data_repeat_1 = adv_data_repeat + pert.sign() * eps
                     logits_1,_,_ = model(adv_data_repeat_1)
                     loss_1 = cal_loss(logits_1,None,labels)
@@ -140,6 +141,7 @@ def nattack(model,data,labels_og,eps=0.01,alpha=0.001,iters=2000,variance=0.001,
         BATCH_SIZE = data.shape[0]
         for b in range(BATCH_SIZE):
             adv_data=torch.squeeze(data[b].clone())
+            adv_data=adv_data+(torch.rand_like(adv_data)*eps*2-eps)
             labels = torch.ones_like(labels_og) * labels_og[b]
             adv_data.detach()
             adv_data_og =  adv_data.clone()
@@ -193,6 +195,7 @@ def nes(model,data,labels_og,eps=0.01,alpha=0.001,iters=2000,variance=0.1,sample
         BATCH_SIZE = data.shape[0]
         for b in range(BATCH_SIZE):
             adv_data=torch.squeeze(data[b].clone())
+            adv_data=adv_data+(torch.rand_like(adv_data)*eps*2-eps)
             labels = torch.ones_like(labels_og) * labels_og[b]
             adv_data.detach()
             adv_data_og =  adv_data.clone()

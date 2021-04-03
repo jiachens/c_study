@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-03-30 21:48:40
+LastEditTime: 2021-04-02 10:45:03
 '''
 
 import os
@@ -580,6 +580,7 @@ def generate_jigsaw_data_label(pointcloud, k):
 
     jigsaw_pointcloud,label = shuffle_data(jigsaw_pointcloud,label)
     # print(jigsaw_pointcloud.shape)
+    # print(np.max(label))
 
     return jigsaw_pointcloud, label
 
