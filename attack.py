@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-03 14:43:16
+LastEditTime: 2021-04-03 16:36:12
 '''
 
 import torch
@@ -173,7 +173,7 @@ def nattack(model,data,labels_og,eps=0.01,alpha=0.001,iters=2000,variance=0.001,
                     losses_perts_sum += torch.sum(torch.reshape(loss, (-1,1,1)) * pert, 0)
 
                     # est_g += losses_perts_mean - torch.mean(loss)
-                loss_all = torch.stack(loss_all)
+                loss_all = torch.cat(loss_all)
                 est_g = ( - (loss_sum / samples) * (perts_sum / samples) + (losses_perts_sum / samples)) / ((torch.std(loss_all)+1e-7) * variance)
                 # print((losses_perts_sum / samples).shape)
                 mu = mu + alpha * est_g.sign()
@@ -225,6 +225,51 @@ def nes(model,data,labels_og,eps=0.01,alpha=0.001,iters=2000,variance=0.1,sample
                 delta = adv_data-adv_data_og
                 delta = torch.clamp(delta,-eps,eps)
                 adv_data = adv_data_og+delta
+            final_adv.append(adv_data)
+
+        final_adv = torch.stack(final_adv)
+    
+    return final_adv.cuda()
+
+
+def evolution(model,data,labels_og,eps=0.01,iters=2000,variance=0.05,samples=32,k=8):
+
+    model.eval()
+    final_adv = []
+    with torch.no_grad():
+        BATCH_SIZE = data.shape[0]
+        for b in range(BATCH_SIZE):
+            adv_data=torch.squeeze(data[b].clone())
+            labels = torch.ones_like(labels_og) * labels_og[b]
+            adv_data.detach()
+            adv_data_og =  adv_data.clone()
+
+            pert = torch.rand(samples,adv_data.shape[0],adv_data.shape[1])*eps*2-eps
+            pert = pert.cuda()
+            for _ in range(iters):
+                
+                loss_iter = []
+                for j in range(samples // BATCH_SIZE):
+                    adv_data_repeat = adv_data_og.repeat([BATCH_SIZE,1,1])
+                    pert[j*BATCH_SIZE:(j+1)*BATCH_SIZE] += torch.normal(0.0,variance,size=adv_data_repeat.shape).cuda()
+                    
+                    pert[j*BATCH_SIZE:(j+1)*BATCH_SIZE] = torch.clamp(adv_data_repeat + pert[j*BATCH_SIZE:(j+1)*BATCH_SIZE] - adv_data_og,-eps,eps)
+                    adv_data_repeat = adv_data_repeat + pert[j*BATCH_SIZE:(j+1)*BATCH_SIZE]
+                    
+                    logits,_,_ = model(adv_data_repeat)
+                    loss = margin_logit_loss(logits,labels)
+                    loss_iter.append(loss)
+                
+                loss_iter = torch.cat(loss_iter)
+                _,index = torch.topk(loss_iter, k, largest = True, sorted = True)
+
+                # print(pert.shape)
+                # print(index)
+                pert = pert[index].repeat([samples // k,1,1])
+
+            # index = torch.argmax(loss_iter)
+            adv_data = pert[0] + adv_data_og
+
             final_adv.append(adv_data)
 
         final_adv = torch.stack(final_adv)
