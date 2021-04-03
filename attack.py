@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-02 21:53:11
+LastEditTime: 2021-04-02 23:04:54
 '''
 
 import torch
@@ -121,7 +121,8 @@ def spsa(model,data,labels_og,eps=0.01,alpha=0.001,iters=2000,samples=32):
                     logits_2,_,_ = model(adv_data_repeat_2)
                     loss_2 = margin_logit_loss(logits_2,labels)
 
-                    est_g += torch.sum((loss_1 - loss_2) / (2 * eps * pert.sign()),0)
+                    sub_loss = torch.reshape(loss_1 - loss_2, [-1,1,1]).repeat([1,adv_data_repeat.shape[1],adv_data_repeat.shape[2]])
+                    est_g += torch.sum(sub_loss / (2 * eps * pert.sign()),0)
                 
                 est_g = est_g / samples
                 adv_data = adv_data + alpha * est_g.sign()
@@ -203,6 +204,7 @@ def nes(model,data,labels_og,eps=0.01,alpha=0.001,iters=2000,variance=0.1,sample
                 est_g = torch.zeros_like(adv_data)
                 for j in range(samples // BATCH_SIZE):
                     adv_data_repeat = adv_data.repeat([BATCH_SIZE,1,1])
+                    # print(adv_data_repeat.shape)
                     pert = torch.normal(0.0,1.0,size=adv_data_repeat.shape).cuda()
                     
                     adv_data_repeat_1 = adv_data_repeat + pert * variance
@@ -212,8 +214,11 @@ def nes(model,data,labels_og,eps=0.01,alpha=0.001,iters=2000,variance=0.1,sample
                     adv_data_repeat_2 = adv_data_repeat - pert * variance
                     logits_2,_,_ = model(adv_data_repeat_2)
                     loss_2 = margin_logit_loss(logits_2,labels)
+                    # print(loss_2.shape)
 
-                    est_g += torch.sum((loss_1 - loss_2) * pert / (2 * variance),0)
+                    sub_loss = torch.reshape(loss_1 - loss_2, [-1,1,1]).repeat([1,adv_data_repeat.shape[1],adv_data_repeat.shape[2]])
+                    # print(sub_loss.shape)
+                    est_g += torch.sum(sub_loss * pert / (2 * variance),0)
                 
                 est_g = est_g / samples
                 adv_data = adv_data + alpha * est_g.sign()
