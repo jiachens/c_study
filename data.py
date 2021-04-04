@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-02 10:45:03
+LastEditTime: 2021-04-03 23:24:01
 '''
 
 import os
@@ -742,7 +742,7 @@ class PCData_Jigsaw(Dataset):
 
 
 if __name__ == '__main__':
-    download()
+    download('modelnet40')
     # get_shapenet_data()
     # train = ModelNet40(1024)
     # test = ModelNet40(1024, 'test')
