@@ -56,7 +56,7 @@ class Reconstruction(object):
             if not os.path.exists(self.save_dir):
                 os.makedirs(self.save_dir)
             else:
-                choose = input("Remove " + self.save_dir + " ? (y/n)")
+                choose = "y"
                 if choose == "y":
                     shutil.rmtree(self.save_dir)
                     os.makedirs(self.save_dir)
