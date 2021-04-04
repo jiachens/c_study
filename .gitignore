@@ -1,6 +1,7 @@
 *.log
 *checkpoints/
 *.npy
+!sphere.npy
 *.png
 plot*
 data
