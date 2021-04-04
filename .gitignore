@@ -2,6 +2,7 @@
 *checkpoints/
 *.npy
 !sphere.npy
+!gaussian.npy
 *.png
 plot*
 data
