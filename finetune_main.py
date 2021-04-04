@@ -55,6 +55,23 @@ def set_bn_eval(m):
     if classname.find('BatchNorm') != -1:
       m.eval()
 
+def load_pretrain(model, pretrain):
+    state_dict = torch.load(pretrain, map_location='cpu')
+    from collections import OrderedDict
+    new_state_dict = OrderedDict()
+    for key, val in state_dict.items():
+        # print(key)
+        if key[:6] == 'module':
+            name = key[7:]  # remove 'module.'
+        else:
+            name = key
+        if name[:7] == 'encoder':
+            new_state_dict[name[8:]] = val
+    model_dict =  model.state_dict()
+    model_dict.update(new_state_dict)
+    model.load_state_dict(model_dict)
+    print(f"Load model from {pretrain}")
+    return model   
 
 def train(args, io):
 
@@ -95,14 +112,17 @@ def train(args, io):
         raise Exception("Not implemented")
 
     if args.p != '':  
-        saved_model = torch.load(args.p)
-        model_dict =  model.state_dict()
-        if args.jigsaw:
-            state_dict = {k[7:]:v for k,v in saved_model.items() if (k[7:] in model_dict.keys() and not k[7:].startswith('stn') and not k[7:].startswith('fstn'))} # module.
+        if not args.autoencoder:
+            saved_model = torch.load(args.p)
+            model_dict =  model.state_dict()
+            if args.jigsaw:
+                state_dict = {k[7:]:v for k,v in saved_model.items() if (k[7:] in model_dict.keys() and not k[7:].startswith('stn') and not k[7:].startswith('fstn'))} # module.
+            else:
+                state_dict = {k[7:]:v for k,v in saved_model.items() if (k[7:] in model_dict.keys())} # module.
+            model_dict.update(state_dict)
+            model.load_state_dict(model_dict)
         else:
-            state_dict = {k[7:]:v for k,v in saved_model.items() if (k[7:] in model_dict.keys())} # module.
-        model_dict.update(state_dict)
-        model.load_state_dict(model_dict)
+            model = load_pretrain(model,args.p)
     else:
         if args.model == 'pointnet_simple':
             for name,m in model.named_modules():
@@ -404,6 +424,8 @@ if __name__ == "__main__":
                         help="Whether to use combine")
     parser.add_argument('--jigsaw',type=bool,default=False,
                         help="Whether to use jigsaw")
+    parser.add_argument('--autoencoder',type=bool,default=False,
+                        help="Whether to use autoencoder")
     parser.add_argument('--model_path', type=str, default='', metavar='N',
                         help='Pretrained model path')
     parser.add_argument('--scheduler',type=str,default='default',

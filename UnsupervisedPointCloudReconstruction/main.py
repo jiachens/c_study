@@ -5,7 +5,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-03-30 22:17:33
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-03 18:15:13
+LastEditTime: 2021-04-03 21:20:51
 '''
 
 import argparse
@@ -61,6 +61,8 @@ def get_parser():
                         help='Num of points to use')
     parser.add_argument('--model_path', type=str, default='', metavar='N',
                         help='Path to load model')
+    parser.add_argument('--pre_path', type=str, default='./', metavar='N',
+                        help='Name of the experiment')
     args = parser.parse_args()
     return args
 
