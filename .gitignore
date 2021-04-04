@@ -7,3 +7,8 @@ data
 PointDA*
 latent_3d_points_py3/data
 *.sh
+UnsupervisedPointCloudReconstruction/cache
+UnsupervisedPointCloudReconstruction/tensorboard
+UnsupervisedPointCloudReconstruction/cache
+UnsupervisedPointCloudReconstruction/snapshot
+UnsupervisedPointCloudReconstruction/mitsuba
