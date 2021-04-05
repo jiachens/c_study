@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-04-04 15:30:04
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-05 11:27:55
+LastEditTime: 2021-04-05 14:27:15
 '''
 
 import os
@@ -133,9 +133,8 @@ class DGCNN_Seg(nn.Module):
 
         x = self.conv5(x)
 
-        x1 = F.adaptive_max_pool1d(x, 1).view(batch_size, -1, 1)
+        x = F.adaptive_max_pool1d(x, 1).view(batch_size, -1, 1)
         # x2 = F.adaptive_avg_pool1d(x, 1).view(batch_size, -1, 1)
-        x = x1
 
 
         l = l.view(batch_size, -1, 1)           
