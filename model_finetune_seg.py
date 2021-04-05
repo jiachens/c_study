@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-04-04 15:30:04
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-04 20:59:41
+LastEditTime: 2021-04-05 11:27:55
 '''
 
 import os
@@ -93,18 +93,18 @@ class DGCNN_Seg(nn.Module):
         self.bn209 = nn.BatchNorm1d(128)
 
         self.conv206 = nn.Sequential(nn.Conv1d(16, 64, kernel_size=1, bias=False),
-                                   self.bn7,
+                                   self.bn206,
                                    nn.LeakyReLU(negative_slope=0.2))
         self.conv207 = nn.Sequential(nn.Conv1d(1088 + 512, 256, kernel_size=1, bias=False),
-                                   self.bn8,
+                                   self.bn207,
                                    nn.LeakyReLU(negative_slope=0.2))
-        self.dp1 = nn.Dropout(p=args.dropout)
+        self.dp201 = nn.Dropout(p=args.dropout)
         self.conv208 = nn.Sequential(nn.Conv1d(256, 256, kernel_size=1, bias=False),
-                                   self.bn9,
+                                   self.bn208,
                                    nn.LeakyReLU(negative_slope=0.2))
-        self.dp2 = nn.Dropout(p=args.dropout)
+        self.dp202 = nn.Dropout(p=args.dropout)
         self.conv209 = nn.Sequential(nn.Conv1d(256, 128, kernel_size=1, bias=False),
-                                   self.bn10,
+                                   self.bn209,
                                    nn.LeakyReLU(negative_slope=0.2))
         self.conv2010 = nn.Conv1d(128, self.seg_num_all, kernel_size=1, bias=False)
         
@@ -145,9 +145,10 @@ class DGCNN_Seg(nn.Module):
         x = x.repeat(1, 1, num_points)          
 
         x = torch.cat((x, x1, x2, x3, x4), dim=1)   
-        x = self.conv207(x)                      
+        x = self.conv207(x)    
+        x = self.dp201(x)                  
         x = self.conv208(x)                      
-        x = self.dp2(x)
+        x = self.dp202(x)
         x = self.conv209(x)                     
         x = self.conv2010(x)                      
         
@@ -174,7 +175,7 @@ class PointNet_Simple_Seg(nn.Module):
         self.conv206 = nn.Conv1d(64 + 64 + args.emb_dims, 512, 1, bias=False)
         self.conv207 = nn.Conv1d(512, 256, 1, bias=False)
         self.conv208 = nn.Conv1d(256, 128, 1, bias=False)
-        self.conv209 = nn.Conv1d(128, self.k, 1, bias=False)
+        self.conv209 = nn.Conv1d(128, self.output_channels, 1, bias=False)
         self.bn201 = nn.BatchNorm1d(512,eps=1e-03)
         self.bn202 = nn.BatchNorm1d(256,eps=1e-03)
         self.bn203 = nn.BatchNorm1d(128,eps=1e-03)

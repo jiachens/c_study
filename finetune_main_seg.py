@@ -5,7 +5,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-04-03 21:52:56
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-04 19:02:43
+LastEditTime: 2021-04-05 11:23:07
 '''
 
 from __future__ import print_function
@@ -17,7 +17,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import CosineAnnealingLR, ExponentialLR, StepLR, MultiStepLR, ReduceLROnPlateau
 from data import PCData_SSL, PCData, PCData_Jigsaw, ShapeNetPart
-from model_finetune_seg import PointNet_Simple_Seg, DGCNN_Seg #, Pct_Seg
+from model_finetune_seg import PointNet_Simple_Seg, DGCNN_Seg, Pct_Seg
 import numpy as np
 from torch.utils.data import DataLoader
 import sys
