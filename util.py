@@ -5,7 +5,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-02 21:50:55
+LastEditTime: 2021-04-05 15:57:36
 '''
 
 
@@ -55,6 +55,13 @@ def cal_loss(pred, trans, gold, smoothing=False):
         else:
             loss = F.cross_entropy(pred, gold, reduction='mean')
             #loss = F.nll_loss(F.softmax(pred), gold, reduction='mean')
+
+    return loss
+
+def cal_loss_no_reduce(pred, gold):
+
+    loss = F.cross_entropy(pred, gold, reduce=False)
+    #loss = F.nll_loss(F.softmax(pred), gold, reduction='mean')
 
     return loss
 
