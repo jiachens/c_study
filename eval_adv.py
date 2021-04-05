@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-03-29 21:31:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-03 16:29:38
+LastEditTime: 2021-04-05 17:27:25
 '''
 from __future__ import print_function
 import os
@@ -97,6 +97,8 @@ def adversarial(args,io,model=None, dataloader=None):
 
         if args.attack == 'pgd':
             adv_data = attack.pgd_attack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,repeat=1,mixup=False)
+        elif args.attack == 'pgd_margin':
+            adv_data = attack.pgd_attack_margin(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,repeat=1,mixup=False)
         elif args.attack == 'nattack':
             adv_data = attack.nattack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,variance=0.1,samples=args.samples)
         elif args.attack == 'spsa':

@@ -5,7 +5,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-05 15:57:36
+LastEditTime: 2021-04-05 17:25:48
 '''
 
 
@@ -309,6 +309,28 @@ def margin_logit_loss(logits, labels):
     max_incorrect_logits, _ = torch.max(incorrect_logits, 1)
 
     return max_incorrect_logits - correct_logits
+
+def margin_logit_loss_reduce(logits, labels):
+    """
+    Computes difference between logits for `labels` and next highest logits.
+    The loss is high when `label` is unlikely (targeted by default).
+    """
+
+    correct_logits = logits.gather(1, labels[:, None]).squeeze(1)
+
+    logit_indices = torch.arange(
+        logits.size()[1],
+        dtype=labels.dtype,
+        device=labels.device,
+    )[None, :].expand(labels.size()[0], -1)
+    incorrect_logits = torch.where(
+        logit_indices == labels[:, None],
+        torch.full_like(logits, float("-inf")),
+        logits,
+    )
+    max_incorrect_logits, _ = torch.max(incorrect_logits, 1)
+
+    return torch.mean(max_incorrect_logits - correct_logits)
 
 def sample_and_group(npoint, radius, nsample, xyz, points):
     """
