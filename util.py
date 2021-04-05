@@ -5,7 +5,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-05 17:25:48
+LastEditTime: 2021-04-05 17:36:50
 '''
 
 
@@ -310,7 +310,7 @@ def margin_logit_loss(logits, labels):
 
     return max_incorrect_logits - correct_logits
 
-def margin_logit_loss_reduce(logits, labels):
+def margin_logit_loss_reduce(logits, trans, labels):
     """
     Computes difference between logits for `labels` and next highest logits.
     The loss is high when `label` is unlikely (targeted by default).
