@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-05 17:26:54
+LastEditTime: 2021-04-05 17:51:08
 '''
 
 import torch
@@ -58,7 +58,7 @@ def pgd_attack(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=F
  
 def pgd_attack_margin(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=False):
     model.eval()
-    max_loss = -1
+    max_loss = -1e5
     best_examples=None
     for i in range(repeat):
         adv_data=data.clone()
