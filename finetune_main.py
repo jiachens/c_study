@@ -55,7 +55,7 @@ def set_bn_eval(m):
     if classname.find('BatchNorm') != -1:
       m.eval()
 
-def load_pretrain(model, pretrain):
+def load_pretrain(model, pretrain, partial):
     state_dict = torch.load(pretrain, map_location='cpu')
     from collections import OrderedDict
     new_state_dict = OrderedDict()
@@ -67,11 +67,23 @@ def load_pretrain(model, pretrain):
             name = key
         if name[:7] == 'encoder':
             new_state_dict[name[8:]] = val
+
     model_dict =  model.state_dict()
+
+    if partial:
+        for key, val in model.named_parameters():
+            if key[:6] == 'module':
+                name = key[7:]  # remove 'module.'
+            else:
+                name = key
+            if name not in new_state_dict.keys():
+                val.requires_grad = False
+        # print(partial_parameter)
+
     model_dict.update(new_state_dict)
     model.load_state_dict(model_dict)
     print(f"Load model from {pretrain}")
-    return model   
+    return model
 
 def train(args, io):
 
@@ -121,8 +133,9 @@ def train(args, io):
                 state_dict = {k[7:]:v for k,v in saved_model.items() if (k[7:] in model_dict.keys())} # module.
             model_dict.update(state_dict)
             model.load_state_dict(model_dict)
+
         else:
-            model = load_pretrain(model,args.p)
+            model = load_pretrain(model,args.p, args.partial)
     else:
         if args.model == 'pointnet_simple':
             for name,m in model.named_modules():
@@ -141,7 +154,7 @@ def train(args, io):
         opt = optim.SGD(model.parameters(), lr=args.lr*100, momentum=args.momentum)
     else:
         print("Use Adam")
-        opt = optim.Adam(model.parameters(), lr=args.lr)
+        opt = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
 
     
     if args.scheduler == 'default':
@@ -426,6 +439,8 @@ if __name__ == "__main__":
                         help="Whether to use jigsaw")
     parser.add_argument('--autoencoder',type=bool,default=False,
                         help="Whether to use autoencoder")
+    parser.add_argument('--partial',type=bool,default=False,
+                        help="Whether to use partial training")
     parser.add_argument('--model_path', type=str, default='', metavar='N',
                         help='Pretrained model path')
     parser.add_argument('--scheduler',type=str,default='default',
