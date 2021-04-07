@@ -5,7 +5,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-03-30 22:17:33
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-03 21:20:51
+LastEditTime: 2021-04-07 00:32:55
 '''
 
 import argparse
@@ -35,8 +35,8 @@ def get_parser():
     parser.add_argument('--shape', type=str, default='plane', metavar='N',
                         choices=['plane', 'sphere', 'gaussian'],
                         help='Shape of points to input decoder, [plane, sphere, gaussian]')
-    parser.add_argument('--dataset', type=str, default='shapenetcorev2', metavar='N',
-                        choices=['shapenetcorev2','modelnet40', 'modelnet10'],
+    parser.add_argument('--dataset', type=str, default='modelnet40', metavar='N',
+                        choices=['modelnet40','scanobjectnn', 'modelnet10'],
                         help='Encoder to use, [shapenetcorev2,modelnet40, modelnet10]')
     parser.add_argument('--use_rotate', action='store_true',
                         help='Rotate the pointcloud before training')

@@ -36,14 +36,148 @@ def rotate_pointcloud(pointcloud):
     pointcloud[:,[0,2]] = pointcloud[:,[0,2]].dot(rotation_matrix) # random rotation (x,z)
     return pointcloud
 
+def parse_dataset_scanobject(partition,num_points=1024):
+    # download('scanobjectnn')
+    # DATA_DIR = tf.keras.utils.get_file(
+    #     "modelnet.zip",
+    #     "http://3dvision.princeton.edu/projects/2014/3DShapeNets/ModelNet10.zip",
+    #     extract=True,
+    #     cache_dir=
+    # )
+    # DATA_DIR = os.path.join(os.path.dirname(DATA_DIR), "ModelNet10")
+    DATA_DIR = '../data/ScanObjectNN'
+
+
+    index = np.random.choice(2048, 1024, replace=False)
+
+    if partition == 'train':
+
+        f = h5py.File(os.path.join(DATA_DIR, "train.h5"))
+        train_data = f['data'][:][:,index,:]
+        for i in range(train_data.shape[0]):
+            # mean_x, mean_y, mean_z = np.mean(train_data[i,:,0]), np.mean(train_data[i,:,1]), np.mean(train_data[i,:,2])
+            train_data[i,:,0] -= (np.max(train_data[i,:,0]) + np.min(train_data[i,:,0])) / 2
+            train_data[i,:,1] -= (np.max(train_data[i,:,1]) + np.min(train_data[i,:,1])) / 2
+            train_data[i,:,2] -= (np.max(train_data[i,:,2]) + np.min(train_data[i,:,2])) / 2
+            leng_x, leng_y, leng_z = np.max(train_data[i,:,0]) - np.min(train_data[i,:,0]), np.max(train_data[i,:,1]) - np.min(train_data[i,:,1]), np.max(train_data[i,:,2]) - np.min(train_data[i,:,2])
+            if leng_x >= leng_y and leng_x >= leng_z:
+                ratio = 2.0 / leng_x
+            elif leng_y >= leng_x and leng_y >= leng_z:
+                ratio = 2.0 / leng_y
+            else:
+                ratio = 2.0 / leng_z
+
+            train_data[i,:,:] *= ratio
+
+        train_label = f['label'][:]
+        return np.array(train_data), np.array(train_label)
+
+    elif partition == 'test':
+
+        f = h5py.File(os.path.join(DATA_DIR, "test.h5"))
+        test_data = f['data'][:][:,index,:]
+        for i in range(test_data.shape[0]):
+            # mean_x, mean_y, mean_z = np.mean(test_data[i,:,0]), np.mean(test_data[i,:,1]), np.mean(test_data[i,:,2])
+            test_data[i,:,0] -= (np.max(test_data[i,:,0]) + np.min(test_data[i,:,0])) / 2
+            test_data[i,:,1] -= (np.max(test_data[i,:,1]) + np.min(test_data[i,:,1])) / 2
+            test_data[i,:,2] -= (np.max(test_data[i,:,2]) + np.min(test_data[i,:,2])) / 2
+            leng_x, leng_y, leng_z = np.max(test_data[i,:,0]) - np.min(test_data[i,:,0]), np.max(test_data[i,:,1]) - np.min(test_data[i,:,1]), np.max(test_data[i,:,2]) - np.min(test_data[i,:,2])
+            if leng_x >= leng_y and leng_x >= leng_z:
+                ratio = 2.0 / leng_x
+            elif leng_y >= leng_x and leng_y >= leng_z:
+                ratio = 2.0 / leng_y
+            else:
+                ratio = 2.0 / leng_z
+
+            test_data[i,:,:] *= ratio
+        
+        test_label = f['label'][:]
+        return np.array(test_data), np.array(test_label)
+
+def parse_dataset_modelnet10(partition,num_points=1024):
+    # download('modelnet10')
+    # DATA_DIR = tf.keras.utils.get_file(
+    #     "modelnet.zip",
+    #     "http://3dvision.princeton.edu/projects/2014/3DShapeNets/ModelNet10.zip",
+    #     extract=True,
+    #     cache_dir=
+    # )
+    # DATA_DIR = os.path.join(os.path.dirname(DATA_DIR), "ModelNet10")
+    DATA_DIR = '../data/PointDA_data/modelnet'
+
+    train_points = []
+    train_labels = []
+    test_points = []
+    test_labels = []
+    class_map = {}
+    folders = glob(os.path.join(DATA_DIR, "[!README]*"))
+
+    index = np.random.choice(2048, 1024, replace=False)
+
+    for i, folder in enumerate(folders):
+        print("processing class: {}".format(os.path.basename(folder)))
+        # store folder name with ID so we can retrieve later
+        class_map[i] = folder.split("/")[-1]
+        # gather all files
+        if partition == 'train':
+            train_files = glob(os.path.join(folder, "train/*"))
+        elif partition == 'test':
+            test_files = glob(os.path.join(folder, "test/*"))
+        if partition == 'train':
+            for f in train_files:
+                raw = np.load(f)[index,:]
+                # print(np.max(raw),np.min(raw))
+                # mean_x, mean_y, mean_z = np.mean(raw[:,0]), np.mean(raw[:,1]), np.mean(raw[:,2])
+                # raw[:,0] -= mean_x
+                # raw[:,1] -= mean_y
+                # raw[:,2] -= mean_z
+                leng_x, leng_y, leng_z = np.max(raw[:,0]) - np.min(raw[:,0]), np.max(raw[:,1]) - np.min(raw[:,1]), np.max(raw[:,2]) - np.min(raw[:,2])
+                raw[:,0] -= (np.max(raw[:,0]) + np.min(raw[:,0])) / 2
+                raw[:,1] -= (np.max(raw[:,1]) + np.min(raw[:,1])) / 2
+                raw[:,2] -= (np.max(raw[:,2]) + np.min(raw[:,2])) / 2
+                if leng_x >= leng_y and leng_x >= leng_z:
+                    ratio = 2.0 / leng_x
+                elif leng_y >= leng_x and leng_y >= leng_z:
+                    ratio = 2.0 / leng_y
+                else:
+                    ratio = 2.0 / leng_z
+
+                raw *= ratio
+                train_points.append(raw)
+                train_labels.append(i)
+
+
+        elif partition == 'test':
+            for f in test_files:
+                raw = np.load(f)[index,:]
+                leng_x, leng_y, leng_z = np.max(raw[:,0]) - np.min(raw[:,0]), np.max(raw[:,1]) - np.min(raw[:,1]), np.max(raw[:,2]) - np.min(raw[:,2])
+                raw[:,0] -= (np.max(raw[:,0]) + np.min(raw[:,0])) / 2
+                raw[:,1] -= (np.max(raw[:,1]) + np.min(raw[:,1])) / 2
+                raw[:,2] -= (np.max(raw[:,2]) + np.min(raw[:,2])) / 2
+                if leng_x >= leng_y and leng_x >= leng_z:
+                    ratio = 2.0 / leng_x
+                elif leng_y >= leng_x and leng_y >= leng_z:
+                    ratio = 2.0 / leng_y
+                else:
+                    ratio = 2.0 / leng_z
+
+                raw *= ratio
+
+                test_points.append(raw)
+                test_labels.append(i)
+
+    if partition == 'train':
+        return np.array(train_points), np.array(train_labels)
+    elif partition == 'test':
+        return np.array(test_points), np.array(test_labels)
+
 
 class Dataset(data.Dataset):
     def __init__(self, root, dataset_name='modelnet40', 
             num_points=2048, split='train', load_name=False,
             random_rotate=False, random_jitter=False, random_translate=False):
 
-        assert dataset_name.lower() in ['shapenetcorev2', 
-            'shapenetpart', 'modelnet10', 'modelnet40']
+        assert dataset_name.lower() in ['scanobjectnn','modelnet10', 'modelnet40']
         assert num_points <= 2048        
 
         if dataset_name in ['shapenetpart', 'shapenetcorev2']:
@@ -51,33 +185,39 @@ class Dataset(data.Dataset):
         else:
             assert split.lower() in ['train', 'test', 'all']
 
-        self.root = os.path.join(root, dataset_name + '*hdf5_2048')
         self.dataset_name = dataset_name
         self.num_points = num_points
         self.split = split
-        self.load_name = load_name
         self.random_rotate = random_rotate
         self.random_jitter = random_jitter
         self.random_translate = random_translate
-        
-        self.path_h5py_all = []
-        self.path_json_all = []
-        if self.split in ['train','trainval','all']:   
-            self.get_path('train')
-        if self.dataset_name in ['shapenetpart', 'shapenetcorev2']:
-            if self.split in ['val','trainval','all']: 
-                self.get_path('val')
-        if self.split in ['test', 'all']:   
-            self.get_path('test')
+        self.load_name = load_name
 
-        self.path_h5py_all.sort()
-        data, label = self.load_h5py(self.path_h5py_all)
-        if self.load_name:
-            self.path_json_all.sort()
-            self.name = self.load_json(self.path_json_all)    # load label name
-        
-        self.data = np.concatenate(data, axis=0)
-        self.label = np.concatenate(label, axis=0) 
+        if dataset_name == 'modelnet40':
+            self.root = os.path.join(root, dataset_name + '*hdf5_2048')
+            
+            self.path_h5py_all = []
+            self.path_json_all = []
+            if self.split in ['train','trainval','all']:   
+                self.get_path('train')
+            if self.dataset_name in ['shapenetpart', 'shapenetcorev2']:
+                if self.split in ['val','trainval','all']: 
+                    self.get_path('val')
+            if self.split in ['test', 'all']:   
+                self.get_path('test')
+
+            self.path_h5py_all.sort()
+            data, label = self.load_h5py(self.path_h5py_all)
+            if self.load_name:
+                self.path_json_all.sort()
+                self.name = self.load_json(self.path_json_all)    # load label name
+            
+            self.data = np.concatenate(data, axis=0)
+            self.label = np.concatenate(label, axis=0) 
+        elif dataset_name == 'modelnet10':
+            self.data, self.label = parse_dataset_modelnet10(split)
+        elif dataset_name == 'scanobjectnn':
+            self.data, self.label = parse_dataset_scanobject(split)
 
     def get_path(self, type):
         path_h5py = os.path.join(self.root, '*%s*.h5'%type)

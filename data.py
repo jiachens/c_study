@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-04 21:05:02
+LastEditTime: 2021-04-07 00:31:17
 '''
 
 import os
@@ -825,6 +825,8 @@ class ShapeNetPart(Dataset):
 
 if __name__ == '__main__':
     download('modelnet40')
+    download('scanobjectnn')
+    download('modelnet10')
     # get_shapenet_data()
     # train = ModelNet40(1024)
     # test = ModelNet40(1024, 'test')
