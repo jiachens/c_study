@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-06 16:26:50
+LastEditTime: 2021-04-06 20:04:49
 '''
 import time
 import torch
@@ -226,7 +226,7 @@ def bim(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=False):
 
 def pgd_attack_seg(model,data,labels,number,eps=0.01,alpha=0.0002,iters=50,repeat=1):
     model.eval()
-    max_loss = -1
+    max_loss = -1e5
     best_examples=None
     for i in range(repeat):
         adv_data=data.clone()
