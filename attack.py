@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-06 20:04:49
+LastEditTime: 2021-04-06 23:23:19
 '''
 import time
 import torch
@@ -265,7 +265,7 @@ def pgd_attack_seg(model,data,labels,number,eps=0.01,alpha=0.0002,iters=50,repea
 
 def pgd_attack_partseg(model,data,labels,one_hot,number,eps=0.01,alpha=0.0002,iters=50,repeat=1):
     model.eval()
-    max_loss = -1
+    max_loss = -1e5
     best_examples=None
     for i in range(repeat):
         adv_data=data.clone()
@@ -276,7 +276,7 @@ def pgd_attack_partseg(model,data,labels,one_hot,number,eps=0.01,alpha=0.0002,it
             adv_data.requires_grad=True
             seg_pred = model(adv_data, one_hot)
             seg_pred = seg_pred.permute(0, 2, 1).contiguous()
-            loss = margin_logit_loss_reduce(seg_pred.view(-1, number),None, labels.view(-1,1).squeeze())
+            loss = cal_loss(seg_pred.view(-1, number),None, labels.view(-1,1).squeeze())
             # loss = cal_loss(outputs,None,labels)
             # print(torch.autograd.grad(loss,adv_data,create_graph=True))   
             loss.backward()
@@ -293,7 +293,7 @@ def pgd_attack_partseg(model,data,labels,one_hot,number,eps=0.01,alpha=0.0002,it
 
         seg_pred = model(adv_data, one_hot)
         seg_pred = seg_pred.permute(0, 2, 1).contiguous()
-        loss = margin_logit_loss_reduce(seg_pred.view(-1, number),None, labels.view(-1,1).squeeze())
+        loss = cal_loss(seg_pred.view(-1, number),None, labels.view(-1,1).squeeze())
         
         if loss > max_loss:
             max_loss=loss
