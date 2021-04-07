@@ -14,6 +14,7 @@ import shutil
 import torch
 import torch.optim as optim
 import numpy as np
+import attack
 
 from tensorboardX import SummaryWriter
 
@@ -24,6 +25,7 @@ from utils import Logger
 
 class Reconstruction(object):
     def __init__(self, args):
+        self.args = args
         self.dataset_name = args.dataset
         if args.epochs != None:
             self.epochs = args.epochs
@@ -167,13 +169,19 @@ class Reconstruction(object):
             # forward
             data = pts.permute(0, 2, 1)
             self.optimizer.zero_grad()
-            output, _ = self.model(data)
+            output, feature = self.model(data)
+            loss_tv = 0
+            if self.args.adversarial:
+                adv_data = attack.pgd_attack(self.model,data,feature,eps=0.05,alpha=0.01,iters=7)
+                self.model.train()
+                output, feature_adv = self.model(adv_data)
+                loss_tv = torch.mean(torch.abs(feature-feature_adv))
 
             # loss
             if len(self.gpu_ids) != 1:  # multiple gpus
-                loss = self.model.module.get_loss(pts, output)
+                loss = self.model.module.get_loss(pts, output) + loss_tv
             else:
-                loss = self.model.get_loss(pts, output)
+                loss = self.model.get_loss(pts, output) + loss_tv
 
             # backward
             loss.backward()

@@ -5,7 +5,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-03-30 22:17:33
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-07 00:32:55
+LastEditTime: 2021-04-07 15:00:34
 '''
 
 import argparse
@@ -55,6 +55,8 @@ def get_parser():
                         help='Save snapshot interval ')
     parser.add_argument('--no_cuda', action='store_true',
                         help='Enables CUDA training')
+    parser.add_argument('--adversarial', action='store_true',
+                        help='Enables adv training')
     parser.add_argument('--eval', action='store_true',
                         help='Evaluate the model')
     parser.add_argument('--num_points', type=int, default=2048,
