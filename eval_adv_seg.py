@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-04-09 17:13:10
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-09 17:29:05
+LastEditTime: 2021-04-09 17:38:03
 '''
 
 from __future__ import print_function
@@ -95,7 +95,8 @@ def adversarial(args,io,model=None, dataloader=None):
         else:
             raise Exception("Not implemented")
         model = nn.DataParallel(model)
-        model.load_state_dict(torch.load(args.model_path))
+        model.load_state_dict(torch.load(args.model_path + '/model_epoch' + str(args.epochs) + '.t7'))
+
 
     test_loss = 0.0
     count = 0.0
