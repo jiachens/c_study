@@ -5,7 +5,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-04-03 21:52:56
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-05 11:23:07
+LastEditTime: 2021-04-09 18:23:54
 '''
 
 from __future__ import print_function
@@ -405,7 +405,7 @@ def adversarial(args,io,model=None, dataloader=None):
         data, label_one_hot, seg = data.to(device), label_one_hot.to(device), seg.to(device)
         data = data.permute(0, 2, 1)
 
-        data = attack.pgd_attack_partseg(model,data,seg,label_one_hot,eps=args.eps,number=seg_num_all,alpha=args.alpha,iters=args.train_iter)
+        data = attack.pgd_attack_partseg(model,data,seg,label_one_hot,eps=args.eps,number=seg_num_all,alpha=args.alpha,iters=args.test_iter)
         batch_size = data.size()[0]
 
         seg_pred = model(data,label_one_hot)

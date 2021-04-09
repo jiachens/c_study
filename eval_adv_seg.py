@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-04-09 17:13:10
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-09 17:38:03
+LastEditTime: 2021-04-09 18:19:12
 '''
 
 from __future__ import print_function
@@ -118,7 +118,7 @@ def adversarial(args,io,model=None, dataloader=None):
         data = data.permute(0, 2, 1)
 
         if args.attack == 'pgd':
-            data = attack.pgd_attack_partseg(model,data,seg,label_one_hot,eps=args.eps,number=seg_num_all,alpha=args.alpha,iters=args.train_iter)
+            data = attack.pgd_attack_partseg(model,data,seg,label_one_hot,eps=args.eps,number=seg_num_all,alpha=args.alpha,iters=args.test_iter)
         batch_size = data.size()[0]
 
         seg_pred = model(data,label_one_hot)
