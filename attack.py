@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-10 14:48:00
+LastEditTime: 2021-04-10 16:29:52
 '''
 import time
 import torch
@@ -582,7 +582,7 @@ class APGDAttack():
         elif self.loss == 'dlr':
             criterion_indiv = self.dlr_loss
         elif self.loss == 'ce_margin':
-            criterion_indiv == margin_logit_loss
+            criterion_indiv = margin_logit_loss
         else:
             raise ValueError('unknowkn loss')
         
