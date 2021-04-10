@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-04-09 17:13:10
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-09 18:19:12
+LastEditTime: 2021-04-09 18:39:29
 '''
 
 from __future__ import print_function
@@ -187,8 +187,6 @@ if __name__ == "__main__":
                         help="Adversarial training perturbation step size")
     parser.add_argument('--test_iter',type=int,default=200,
                         help="Number of steps taken to create adversarial test inputs")
-    parser.add_argument('--total',type=int,default=1000,
-                        help="Number of samples to evaluate")
     parser.add_argument('--adversarial',type=bool,default=False,
                         help="Whether to use adversarial examples")
     parser.add_argument('--gpu',type=str,default='0',

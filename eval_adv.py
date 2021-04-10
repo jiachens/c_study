@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-03-29 21:31:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-06 15:54:46
+LastEditTime: 2021-04-10 14:48:34
 '''
 from __future__ import print_function
 import os
@@ -88,6 +88,8 @@ def adversarial(args,io,model=None, dataloader=None):
 
     if args.attack == 'apgd':
         apgd = attack.APGDAttack(model,n_iter=args.test_iter,eps=args.eps,seed=args.seed)
+    elif args.attack == 'apgd_margin':
+        apgd = attack.APGDAttack(model,n_iter=args.test_iter,loss='ce_margin',eps=args.eps,seed=args.seed)
     
     test_acc = 0.0
     test_true = []
@@ -111,9 +113,12 @@ def adversarial(args,io,model=None, dataloader=None):
             adv_data = attack.nes(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,variance=0.001,samples=args.samples)
         elif args.attack == 'evolution':
             adv_data = attack.evolution(model,data,label,eps=args.eps,iters=args.test_iter,variance=0.005,samples=args.samples,k=args.samples // 4)
-        elif args.attack == 'apgd':
-            # apgd = attack.APGDAttack(model,n_iter=args.test_iter,eps=args.eps,seed=args.seed)
+        elif args.attack == 'apgd' or args.attack == 'apgd_margin':
             _,adv_data = apgd.perturb(data,label)
+        elif args.attack == 'mim':
+            adv_data = attack.mim(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,repeat=1,mixup=False)
+        elif args.attack == 'mim_margin':
+            adv_data = attack.mim_margin(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,repeat=1,mixup=False)
             
         
         print(adv_data - data)
