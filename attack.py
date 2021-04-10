@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-10 16:29:52
+LastEditTime: 2021-04-10 16:46:29
 '''
 import time
 import torch
@@ -161,7 +161,7 @@ def mim(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=False):
             # print(torch.autograd.grad(loss,adv_data,create_graph=True))   
             loss.backward()
             with torch.no_grad():
-                g += torch.linalg.norm(adv_data.grad, ord=float('inf'))
+                g += adv_data.grad / torch.max(torch.abs(adv_data.grad))
                 adv_data = adv_data + alpha*g
                 delta = adv_data-data
                 delta = torch.clamp(delta,-eps,eps)
@@ -203,7 +203,7 @@ def mim_margin(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=F
             # print(torch.autograd.grad(loss,adv_data,create_graph=True))   
             loss.backward()
             with torch.no_grad():
-                g += torch.linalg.norm(adv_data.grad, ord=float('inf'))
+                g += adv_data.grad / torch.max(torch.abs(adv_data.grad))
                 adv_data = adv_data + alpha*g
                 delta = adv_data-data
                 delta = torch.clamp(delta,-eps,eps)
