@@ -203,7 +203,7 @@ class Dataset(data.Dataset):
             num_points=2048, split='train', load_name=False,
             random_rotate=False, random_jitter=False, random_translate=False):
 
-        assert dataset_name.lower() in ['scanobjectnn','modelnet10', 'modelnet40']
+        assert dataset_name.lower() in ['scanobjectnn','modelnet10', 'modelnet40', 'shapenetpart']
         assert num_points <= 2048        
 
         if dataset_name in ['shapenetpart', 'shapenetcorev2']:
