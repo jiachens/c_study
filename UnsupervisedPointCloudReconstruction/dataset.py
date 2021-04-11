@@ -101,7 +101,7 @@ def load_data_partseg(partition):
     all_data = []
     all_label = []
     all_seg = []
-    if partition == 'trainval':
+    if partition == 'trainval' or partition == 'train':
         file = glob(os.path.join(DATA_DIR, 'shapenet*hdf5*', '*train*.h5')) \
                + glob(os.path.join(DATA_DIR, 'shapenet*hdf5*', '*val*.h5'))
     else:
