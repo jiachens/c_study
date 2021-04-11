@@ -96,8 +96,8 @@ def parse_dataset_scanobject(partition,num_points=1024):
 
 def load_data_partseg(partition):
     # download('shapenetpart')
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    DATA_DIR = os.path.join(BASE_DIR, 'data')
+    DATA_DIR = '../data/shapenet_part_seg_hdf5_data'
+
     all_data = []
     all_label = []
     all_seg = []
