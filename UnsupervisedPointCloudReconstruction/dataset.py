@@ -94,6 +94,32 @@ def parse_dataset_scanobject(partition,num_points=1024):
         test_label = f['label'][:]
         return np.array(test_data), np.array(test_label)
 
+def load_data_partseg(partition):
+    # download('shapenetpart')
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    DATA_DIR = os.path.join(BASE_DIR, 'data')
+    all_data = []
+    all_label = []
+    all_seg = []
+    if partition == 'trainval':
+        file = glob.glob(os.path.join(DATA_DIR, 'shapenet*hdf5*', '*train*.h5')) \
+               + glob.glob(os.path.join(DATA_DIR, 'shapenet*hdf5*', '*val*.h5'))
+    else:
+        file = glob.glob(os.path.join(DATA_DIR, 'shapenet*hdf5*', '*%s*.h5'%partition))
+    for h5_name in file:
+        f = h5py.File(h5_name, 'r+')
+        data = f['data'][:].astype('float32')
+        label = f['label'][:].astype('int64')
+        seg = f['pid'][:].astype('int64')
+        f.close()
+        all_data.append(data)
+        all_label.append(label)
+        all_seg.append(seg)
+    all_data = np.concatenate(all_data, axis=0)
+    all_label = np.concatenate(all_label, axis=0)
+    all_seg = np.concatenate(all_seg, axis=0)
+    return all_data, all_label, all_seg
+
 def parse_dataset_modelnet10(partition,num_points=1024):
     # download('modelnet10')
     # DATA_DIR = tf.keras.utils.get_file(
@@ -218,6 +244,8 @@ class Dataset(data.Dataset):
             self.data, self.label = parse_dataset_modelnet10(split)
         elif dataset_name == 'scanobjectnn':
             self.data, self.label = parse_dataset_scanobject(split)
+        elif dataset_name == 'shapenetpart':
+            self.data, self.label, _ = load_data_partseg(split)
 
     def get_path(self, type):
         path_h5py = os.path.join(self.root, '*%s*.h5'%type)
