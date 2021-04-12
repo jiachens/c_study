@@ -5,7 +5,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-02-16 17:42:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-03-31 00:09:28
+LastEditTime: 2021-04-12 16:54:04
 '''
 
 
@@ -153,11 +153,20 @@ def train(args, io):
             if args.rotation or args.noise:
                 rotated_data, rotation_label = aug_data.to(device).float(), aug_label.to(device).squeeze()
                 if args.adversarial:
-                    rotated_data = attack.pgd_attack(model,rotated_data,rotation_label,eps=args.eps,alpha=args.alpha,iters=args.train_iter,mixup=False) 
+                    if not args.feature:
+                        rotated_data = attack.pgd_attack(model,rotated_data,rotation_label,eps=args.eps,alpha=args.alpha,iters=args.train_iter,mixup=False) 
+                    else:
+                        _,feature_interest_clean,_ = model(rotated_data)
+                        rotated_data = attack.pgd_attack_feature(model,rotated_data,feature_interest_clean,eps=args.eps,alpha=args.alpha,iters=args.train_iter,mixup=False) 
                     model.train()
                 opt.zero_grad()
-                logits_rotation,_,trans_feat = model(rotated_data)
-                loss_rotation = criterion(logits_rotation,trans_feat,rotation_label)
+                logits_rotation,feature_interest,trans_feat = model(rotated_data)
+
+                if args.feature and args.adversarial:
+                    loss_tv = torch.mean(torch.abs(feature_interest_clean - feature_interest))
+                else:
+                    loss_tv = 0
+                loss_rotation = criterion(logits_rotation,trans_feat,rotation_label) + loss_tv
                 loss_rotation.backward()
                 opt.step()
                 # preds = logits.max(dim=1)[1]
@@ -171,13 +180,23 @@ def train(args, io):
             elif args.jigsaw:             
                 jigsaw_data, jigsaw_label = aug_data.to(device).float(), aug_label.to(device).squeeze().long()
                 if args.adversarial:
-                    jigsaw_data = attack.pgd_attack_seg(model,jigsaw_data,jigsaw_label,args.k1**3,eps=args.eps,alpha=args.alpha,iters=args.train_iter) 
+                    if not args.feature:
+                        jigsaw_data = attack.pgd_attack_seg(model,jigsaw_data,jigsaw_label,args.k1**3,eps=args.eps,alpha=args.alpha,iters=args.train_iter) 
+                    else:
+                        _,feature_interest_clean,_ = model(jigsaw_data)
+                        jigsaw_data = attack.pgd_attack_seg_feature(model,jigsaw_data,feature_interest_clean,args.k1**3,eps=args.eps,alpha=args.alpha,iters=args.train_iter) 
                     model.train()
                 opt.zero_grad()
-                logits_jigsaw,_,_ = model(jigsaw_data)
+                logits_jigsaw,feature_interest,_ = model(jigsaw_data)
                 logits_jigsaw = logits_jigsaw.view(-1,args.k1**3)
                 jigsaw_label = jigsaw_label.view(-1,1)[:,0]
-                loss_jigsaw = F.nll_loss(logits_jigsaw,jigsaw_label)
+
+                if args.feature and args.adversarial:
+                    loss_tv = torch.mean(torch.abs(feature_interest_clean - feature_interest))
+                else:
+                    loss_tv = 0
+
+                loss_jigsaw = F.nll_loss(logits_jigsaw,jigsaw_label) + loss_tv
                 loss_jigsaw.backward()
                 opt.step()
                 count += batch_size   
@@ -429,6 +448,8 @@ if __name__ == "__main__":
                         help="Whether to use noise")
     parser.add_argument('--jigsaw',type=bool,default=False,
                         help="Whether to use jigsaw")
+    parser.add_argument('--feature',type=bool,default=False,
+                        help="Whether to use feature loss")
     parser.add_argument('--model_path', type=str, default='', metavar='N',
                         help='Pretrained model path')
     parser.add_argument('--angles',type=int,default=6,

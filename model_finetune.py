@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-02-16 21:25:32
 LastEditors: Jiachen Sun
-LastEditTime: 2021-03-31 00:08:14
+LastEditTime: 2021-04-12 16:10:59
 '''
 
 import os
@@ -286,9 +286,10 @@ class Pct_Rotation(nn.Module):
         x = self.dp1(x)
         x = F.leaky_relu(self.bn7(self.linear2(x)), negative_slope=0.2)
         x = self.dp2(x)
+        feature_interest = x
         x = self.linear100(x)
 
-        return x, None, None
+        return x, feature_interest, None
 
 class Pct_Jigsaw(nn.Module):
     def __init__(self, args, output_channels=40):
@@ -360,6 +361,7 @@ class Pct_Jigsaw(nn.Module):
         x = torch.cat([x, feature_1], dim=1)
         x = self.conv_fuse(x)
         x = F.adaptive_max_pool1d(x, 1).view(batch_size, -1)
+        feature_interest = x
 
         # x = F.leaky_relu(self.bn6(self.linear1(x)), negative_slope=0.2)
         # x = self.dp1(x)
@@ -377,7 +379,7 @@ class Pct_Jigsaw(nn.Module):
         x = F.log_softmax(x.view(-1,self.k), dim=-1)
         x = x.view(batch_size, self.args.num_points, self.k)
 
-        return x, None, None
+        return x, feature_interest, None
 
 # class Pct(nn.Module):
 #     def __init__(self, args, output_channels=40):
@@ -830,9 +832,11 @@ class PointNet_Simple_Rotation(nn.Module):
         x = self.dp1(x)
         x = F.relu(self.bn7(self.linear2(x)))
         x = self.dp2(x)
+        feature_interest = x
+
         x = self.linear3(x)
         
-        return x, None, None
+        return x, feature_interest, None
 
 class PointNet_Simple_Noise(nn.Module):
     def __init__(self, args, output_channels=40):
@@ -928,6 +932,7 @@ class PointNet_Simple_Jigsaw(nn.Module):
         x = F.relu(self.bn4(self.conv4(x)))
         x = F.relu(self.bn5(self.conv5(x)))
         x = F.adaptive_max_pool1d(x, 1).squeeze()
+        feature_interest = x
         
         x = x.view(-1, 1024, 1).repeat(1, 1, self.args.num_points)
         x = torch.cat([x, pointfeat], 1)
@@ -939,7 +944,7 @@ class PointNet_Simple_Jigsaw(nn.Module):
         x = F.log_softmax(x.view(-1,self.k), dim=-1)
         x = x.view(batchsize, self.args.num_points, self.k)
         
-        return x, None, None
+        return x, feature_interest, None
 
 
 class PointNet(nn.Module):
@@ -1274,6 +1279,9 @@ class DGCNN_Rotation(nn.Module):
         x = self.dp1(x)
         x = F.leaky_relu(self.bn7(self.linear2(x)), negative_slope=0.2)
         x = self.dp2(x)
+
+        feature_interest = x 
+        
         x = self.linear3(x)
         # else:
         #     x = F.leaky_relu(self.bn8(self.linear4(x)), negative_slope=0.2)
@@ -1281,7 +1289,7 @@ class DGCNN_Rotation(nn.Module):
         #     x = F.leaky_relu(self.bn9(self.linear5(x)), negative_slope=0.2)
         #     x = self.dp4(x)
         #     x = self.linear6(x)
-        return x, None, None
+        return x, feature_interest, None
 
 
 class DGCNN_Noise(nn.Module):
@@ -1486,6 +1494,8 @@ class DGCNN_Jigsaw(nn.Module):
         x2 = F.adaptive_avg_pool1d(x, 1).view(batch_size, -1)
         x = torch.cat((x1, x2), 1)
 
+        feature_interest = x
+
         x = x.view(-1, self.args.emb_dims * 2, 1).repeat(1, 1, self.args.num_points)
         x = torch.cat([x, pointfeat], 1)
         
@@ -1504,7 +1514,7 @@ class DGCNN_Jigsaw(nn.Module):
         #     x = F.leaky_relu(self.bn9(self.linear5(x)), negative_slope=0.2)
         #     x = self.dp4(x)
         #     x = self.linear6(x)
-        return x, None, None
+        return x, feature_interest, None
 
     def get_partials(self,x,labels): 
         batch_size = x.size(0)

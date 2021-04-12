@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-10 16:46:29
+LastEditTime: 2021-04-12 16:53:20
 '''
 import time
 import torch
@@ -59,6 +59,46 @@ def pgd_attack(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=F
             
     return best_examples.cuda()
  
+def pgd_attack_feature(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=False):
+    model.eval()
+    max_loss = -1
+    best_examples=None
+    for i in range(repeat):
+        adv_data=data.clone()
+        adv_data=adv_data+(torch.rand_like(adv_data)*eps*2-eps)
+        # adv_data = torch.clamp(data,-1,1)
+        adv_data.detach()
+        for i in range(iters):
+            adv_data.requires_grad=True
+            _,outputs,trans = model(adv_data)
+            if mixup:
+                loss = cross_entropy_with_probs(outputs,labels)
+            else:
+                loss = torch.mean(torch.abs(outputs - labels))
+            # print(torch.autograd.grad(loss,adv_data,create_graph=True))   
+            loss.backward(retain_graph=True)
+            with torch.no_grad():
+                adv_data = adv_data + alpha*adv_data.grad.sign()
+                delta = adv_data-data
+                delta = torch.clamp(delta,-eps,eps)
+                adv_data = data+delta
+               #If points outside the unit cube are invalid then
+                # adv_data = torch.clamp(adv_data,-1,1)
+            if loss > max_loss:
+                max_loss=loss
+                best_examples=adv_data
+
+        outputs,_,trans = model(best_examples)
+        if mixup:
+            loss = cross_entropy_with_probs(outputs,labels)
+        else:
+            loss = torch.mean(torch.abs(outputs - labels))
+        if loss > max_loss:
+            max_loss=loss
+            best_examples=adv_data.cpu()
+            
+    return best_examples.cuda()
+
 def pgd_attack_margin(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=False):
     model.eval()
     max_loss = -1e5
@@ -183,47 +223,6 @@ def mim(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=False):
             
     return best_examples.cuda()
 
-def mim_margin(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=False):
-    model.eval()
-    max_loss = -1e5
-    best_examples=None
-    for i in range(repeat):
-        adv_data=data.clone()
-        adv_data=adv_data+(torch.rand_like(adv_data)*eps*2-eps)
-        # adv_data = torch.clamp(data,-1,1)
-        adv_data.detach()
-        g = 0
-        for i in range(iters):
-            adv_data.requires_grad=True
-            outputs,_,trans = model(adv_data)
-            if mixup:
-                loss = cross_entropy_with_probs(outputs,labels)
-            else:
-                loss = margin_logit_loss_reduce(outputs,None,labels)
-            # print(torch.autograd.grad(loss,adv_data,create_graph=True))   
-            loss.backward()
-            with torch.no_grad():
-                g += adv_data.grad / torch.max(torch.abs(adv_data.grad))
-                adv_data = adv_data + alpha*g
-                delta = adv_data-data
-                delta = torch.clamp(delta,-eps,eps)
-                adv_data = data+delta
-               #If points outside the unit cube are invalid then
-                # adv_data = torch.clamp(adv_data,-1,1)
-            if loss > max_loss:
-                max_loss=loss
-                best_examples=adv_data
-
-        outputs,_,trans = model(best_examples)
-        if mixup:
-            loss = cross_entropy_with_probs(outputs,labels)
-        else:
-            loss = margin_logit_loss_reduce(outputs,None,labels)
-        if loss > max_loss:
-            max_loss=loss
-            best_examples=adv_data.cpu()
-            
-    return best_examples.cuda()
 
 
 def bim(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=False):
@@ -299,6 +298,48 @@ def pgd_attack_seg(model,data,labels,number,eps=0.01,alpha=0.0002,iters=50,repea
         logits = logits.view(-1,number)
         labels = labels.view(-1,1)[:,0]
         loss= F.nll_loss(logits,labels)
+        if loss > max_loss:
+            max_loss=loss
+            best_examples=adv_data.cpu()
+            
+    return best_examples.cuda()
+
+def pgd_attack_seg_feature(model,data,labels,number,eps=0.01,alpha=0.0002,iters=50,repeat=1):
+    model.eval()
+    max_loss = -1e5
+    best_examples=None
+    for i in range(repeat):
+        adv_data=data.clone()
+        adv_data=adv_data+(torch.rand_like(adv_data)*eps*2-eps)
+        # adv_data = torch.clamp(data,-1,1)
+        adv_data.detach()
+        for i in range(iters):
+            adv_data.requires_grad=True
+            logits,outputs,_ = model(adv_data)
+            # logits = logits.view(-1,number)
+            # labels = labels.view(-1,1)[:,0]
+            # loss= F.nll_loss(logits,labels)
+            loss = torch.mean(torch.abs(outputs - labels))
+            
+            # loss = cal_loss(outputs,None,labels)
+            # print(torch.autograd.grad(loss,adv_data,create_graph=True))   
+            loss.backward(retain_graph=True)
+            with torch.no_grad():
+                adv_data = adv_data + alpha*adv_data.grad.sign()
+                delta = adv_data-data
+                delta = torch.clamp(delta,-eps,eps)
+                adv_data = data+delta
+               #If points outside the unit cube are invalid then
+                # adv_data = torch.clamp(adv_data,-1,1)
+            if loss > max_loss:
+                max_loss=loss
+                best_examples=adv_data.cpu()
+
+        logits,outputs,_ = model(adv_data)
+        # logits = logits.view(-1,number)
+        # labels = labels.view(-1,1)[:,0]
+        # loss= F.nll_loss(logits,labels)
+        loss = torch.mean(torch.abs(outputs - labels))
         if loss > max_loss:
             max_loss=loss
             best_examples=adv_data.cpu()
