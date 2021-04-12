@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-04-04 15:30:04
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-12 18:03:06
+LastEditTime: 2021-04-12 19:58:10
 '''
 
 import os
@@ -236,16 +236,16 @@ class Pct_Seg(nn.Module):
                                     nn.LeakyReLU(negative_slope=0.2))
 
         self.conv_fuse201 = nn.Sequential(nn.Conv1d(1024, 256, kernel_size=1, bias=False),
-                                    nn.BatchNorm1d(1024),
+                                    nn.BatchNorm1d(256),
                                     nn.LeakyReLU(negative_slope=0.2))
         self.dp201 = nn.Dropout(p=args.dropout)
         
         self.conv_fuse202 = nn.Sequential(nn.Conv1d(1024 + 256 + 64, 256, kernel_size=1, bias=False),
-                                    nn.BatchNorm1d(1024),
+                                    nn.BatchNorm1d(256),
                                     nn.LeakyReLU(negative_slope=0.2))
 
         self.conv_fuse203 = nn.Sequential(nn.Conv1d(256, 256, kernel_size=1, bias=False),
-                                    nn.BatchNorm1d(1024),
+                                    nn.BatchNorm1d(256),
                                     nn.LeakyReLU(negative_slope=0.2))
         
         self.conv_fuse204 = nn.Conv1d(256, self.output_channels, kernel_size=1, bias=False)
