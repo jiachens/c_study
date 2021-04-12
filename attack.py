@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-12 16:53:20
+LastEditTime: 2021-04-12 17:08:35
 '''
 import time
 import torch
@@ -88,7 +88,7 @@ def pgd_attack_feature(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1
                 max_loss=loss
                 best_examples=adv_data
 
-        outputs,_,trans = model(best_examples)
+        _,outputs,trans = model(best_examples)
         if mixup:
             loss = cross_entropy_with_probs(outputs,labels)
         else:
