@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-04-04 15:30:04
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-05 14:27:15
+LastEditTime: 2021-04-12 18:03:06
 '''
 
 import os
@@ -240,7 +240,7 @@ class Pct_Seg(nn.Module):
                                     nn.LeakyReLU(negative_slope=0.2))
         self.dp201 = nn.Dropout(p=args.dropout)
         
-        self.conv_fuse202 = nn.Sequential(nn.Conv1d(1024 + 256, 256, kernel_size=1, bias=False),
+        self.conv_fuse202 = nn.Sequential(nn.Conv1d(1024 + 256 + 64, 256, kernel_size=1, bias=False),
                                     nn.BatchNorm1d(1024),
                                     nn.LeakyReLU(negative_slope=0.2))
 
@@ -250,6 +250,10 @@ class Pct_Seg(nn.Module):
         
         self.conv_fuse204 = nn.Conv1d(256, self.output_channels, kernel_size=1, bias=False)
 
+        self.conv_fuse205 = nn.Sequential(nn.Conv1d(16, 64, kernel_size=1, bias=False),
+                                    nn.BatchNorm1d(64),
+                                    nn.LeakyReLU(negative_slope=0.2))
+
         # self.linear1 = nn.Linear(1024, 512, bias=False)
         # self.bn6 = nn.BatchNorm1d(512)
         # self.dp1 = nn.Dropout(p=args.dropout)
@@ -258,7 +262,7 @@ class Pct_Seg(nn.Module):
         # self.dp2 = nn.Dropout(p=args.dropout)
         # self.linear3 = nn.Linear(256, output_channels)
 
-    def forward(self, x):
+    def forward(self, x, l):
         xyz = x.permute(0, 2, 1)
         batch_size, _, _ = x.size()
         # B, D, N
@@ -280,7 +284,12 @@ class Pct_Seg(nn.Module):
         x = self.conv_fuse(x)
         x2 = self.conv_fuse201(x)
 
-        x = F.adaptive_max_pool1d(x, 1).view(batch_size, -1, 1).repeat(1, 1, self.args.num_points)
+        x = F.adaptive_max_pool1d(x, 1).view(batch_size, -1, 1) #.repeat(1, 1, self.args.num_points)
+
+        l = l.view(batch_size, -1, 1)   
+        l = self.conv_fuse205(l)
+
+        x = torch.cat([x, l], 1).view(batch_size, -1, 1).repeat(1, 1, self.args.num_points)
 
         x = torch.cat([x, x2], 1)
         x = self.conv_fuse202(x)
