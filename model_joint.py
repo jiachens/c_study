@@ -430,8 +430,8 @@ class PointNet_Rotation(nn.Module):
     def __init__(self, args, output_channels=40):
         super(PointNet_Rotation, self).__init__()
         self.args = args
-        self.stn = STN3d()
-        self.fstn = STNkd(k=64)
+        # self.stn = STN3d()
+        # self.fstn = STNkd(k=64)
         self.conv1 = nn.Conv1d(3, 64, kernel_size=1, bias=False)
         self.conv2 = nn.Conv1d(64, 64, kernel_size=1, bias=False)
         self.conv3 = nn.Conv1d(64, 64, kernel_size=1, bias=False)
@@ -457,16 +457,16 @@ class PointNet_Rotation(nn.Module):
 
     def forward(self, x, rotation=False):
         batch_size = x.size(0)
-        trans = self.stn(x, rotation)
-        x = x.transpose(2, 1)
-        x = torch.bmm(x, trans)
-        x = x.transpose(2, 1)
+        # trans = self.stn(x, rotation)
+        # x = x.transpose(2, 1)
+        # x = torch.bmm(x, trans)
+        # x = x.transpose(2, 1)
         x = F.relu(self.bn1(self.conv1(x),rotation))
         x = F.relu(self.bn2(self.conv2(x),rotation))
-        trans_feat = self.fstn(x, rotation)
-        x = x.transpose(2,1)
-        x = torch.bmm(x, trans_feat)
-        x = x.transpose(2,1)
+        # trans_feat = self.fstn(x, rotation)
+        # x = x.transpose(2,1)
+        # x = torch.bmm(x, trans_feat)
+        # x = x.transpose(2,1)
         x = F.relu(self.bn3(self.conv3(x),rotation))
         x = F.relu(self.bn4(self.conv4(x),rotation))
         x = F.relu(self.bn5(self.conv5(x),rotation))
@@ -480,15 +480,15 @@ class PointNet_Rotation(nn.Module):
         else:
             x = self.linear4(x)
         
-        return x, trans, trans_feat
+        return x, None, None
 
 class PointNet_Jigsaw(nn.Module):
     def __init__(self, args, output_channels=40):
         super(PointNet_Jigsaw, self).__init__()
         self.args = args
         self.k = (args.k1)**3
-        self.stn = STN3d()
-        self.fstn = STNkd(k=64)
+        # self.stn = STN3d()
+        # self.fstn = STNkd(k=64)
         self.conv1 = nn.Conv1d(3, 64, kernel_size=1, bias=False)
         self.conv2 = nn.Conv1d(64, 64, kernel_size=1, bias=False)
         self.conv3 = nn.Conv1d(64, 64, kernel_size=1, bias=False)
@@ -518,16 +518,16 @@ class PointNet_Jigsaw(nn.Module):
 
     def forward(self, x, jigsaw=False):
         batchsize = x.size()[0]
-        trans = self.stn(x,jigsaw)
-        x = x.transpose(2, 1)
-        x = torch.bmm(x,trans)
-        x = x.transpose(2, 1)
+        # trans = self.stn(x,jigsaw)
+        # x = x.transpose(2, 1)
+        # x = torch.bmm(x,trans)
+        # x = x.transpose(2, 1)
         x = F.relu(self.bn1(self.conv1(x),jigsaw))
         x = F.relu(self.bn2(self.conv2(x),jigsaw))
-        trans_feat = self.fstn(x,jigsaw)
-        x = x.transpose(2,1)
-        x = torch.bmm(x, trans_feat)
-        x = x.transpose(2,1)
+        # trans_feat = self.fstn(x,jigsaw)
+        # x = x.transpose(2,1)
+        # x = torch.bmm(x, trans_feat)
+        # x = x.transpose(2,1)
         pointfeat = x
         x = F.relu(self.bn3(self.conv3(x),jigsaw))
         x = F.relu(self.bn4(self.conv4(x),jigsaw))
@@ -550,7 +550,7 @@ class PointNet_Jigsaw(nn.Module):
             x = F.log_softmax(x.view(-1,self.k), dim=-1)
             x = x.view(batchsize, self.args.num_points, self.k)
         
-        return x, trans, trans_feat
+        return x, None, None
 
 class DGCNN_Rotation(nn.Module):
     def __init__(self, args, output_channels=40):
