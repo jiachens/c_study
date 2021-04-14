@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-03-29 21:31:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-10 14:48:34
+LastEditTime: 2021-04-13 23:03:26
 '''
 from __future__ import print_function
 import os
@@ -190,17 +190,27 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
-    _init_()
-    print(args.adversarial)
-    io = IOStream(args.pre_path+'finetune_checkpoints/' + args.exp_name + '/run_' + str(args.epochs) + '_' + args.attack + '_' + str(args.test_iter) + '.log')
-    io.cprint(str(args))
 
-    args.cuda = not args.no_cuda and torch.cuda.is_available()
-    if args.cuda:
-        io.cprint(
-            'Using GPU : ' + str(torch.cuda.current_device()) + ' from ' + str(torch.cuda.device_count()) + ' devices')
-        torch.cuda.manual_seed(args.seed)
-    else:
-        io.cprint('Using CPU')
+    acc = []
 
-    adversarial(args,io,model=None)
+    for i in range(5):
+
+        args.seed = i
+        _init_()
+        print(args.adversarial)
+        io = IOStream(args.pre_path+'finetune_checkpoints/' + args.exp_name + '/run_' + str(args.epochs) + '_' + args.attack + '_' + str(args.test_iter) + '.log')
+        io.cprint(str(args))
+
+        args.cuda = not args.no_cuda and torch.cuda.is_available()
+        if args.cuda:
+            io.cprint(
+                'Using GPU : ' + str(torch.cuda.current_device()) + ' from ' + str(torch.cuda.device_count()) + ' devices')
+            torch.cuda.manual_seed(args.seed)
+        else:
+            io.cprint('Using CPU')
+
+        acc.append(adversarial(args,io,model=None))
+    
+
+    outstr = ' mean: %.6f, std: %.6f' % (np.mean(acc), np.std(acc))
+    io.cprint(args.attack + outstr)
