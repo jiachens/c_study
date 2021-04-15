@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-13 23:53:17
+LastEditTime: 2021-04-15 14:24:48
 '''
 import time
 import torch
@@ -53,6 +53,53 @@ def pgd_attack(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=F
             loss = cross_entropy_with_probs(outputs,labels)
         else:
             loss = cal_loss(outputs,None,labels)
+        if loss > max_loss:
+            max_loss=loss
+            best_examples=adv_data.cpu()
+            
+    return best_examples.cuda()
+
+def pgd_attack_ensemble(model1,model2,model3,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=False):
+    model1.eval()
+    model2.eval()
+    model3.eval()
+    max_loss = -1
+    best_examples=None
+    for i in range(repeat):
+        adv_data=data.clone()
+        adv_data=adv_data+(torch.rand_like(adv_data)*eps*2-eps)
+        # adv_data = torch.clamp(data,-1,1)
+        adv_data.detach()
+        for i in range(iters):
+            adv_data.requires_grad=True
+            outputs1,_,_ = model1(adv_data)
+            outputs2,_,_ = model2(adv_data)
+            outputs3,_,_ = model3(adv_data)
+            if mixup:
+                raise NotImplementedError('not implemented')
+            else:
+                loss = cal_loss(outputs1 + outputs2 + outputs3,None,labels)
+
+            # print(torch.autograd.grad(loss,adv_data,create_graph=True))   
+            loss.backward()
+            with torch.no_grad():
+                adv_data = adv_data + alpha*adv_data.grad.sign()
+                delta = adv_data-data
+                delta = torch.clamp(delta,-eps,eps)
+                adv_data = data+delta
+               #If points outside the unit cube are invalid then
+                # adv_data = torch.clamp(adv_data,-1,1)
+            if loss > max_loss:
+                max_loss=loss
+                best_examples=adv_data
+
+        outputs1,_,_ = model1(best_examples)
+        outputs2,_,_ = model2(best_examples)
+        outputs3,_,_ = model3(best_examples)
+        if mixup:
+            raise NotImplementedError('not implemented')
+        else:
+            loss = cal_loss(outputs1 + outputs2 + outputs3,None,labels)
         if loss > max_loss:
             max_loss=loss
             best_examples=adv_data.cpu()
