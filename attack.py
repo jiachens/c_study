@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-15 14:24:48
+LastEditTime: 2021-04-16 20:27:09
 '''
 import time
 import torch
@@ -72,13 +72,15 @@ def pgd_attack_ensemble(model1,model2,model3,data,labels,eps=0.01,alpha=0.0002,i
         adv_data.detach()
         for i in range(iters):
             adv_data.requires_grad=True
-            outputs1,_,_ = model1(adv_data)
-            outputs2,_,_ = model2(adv_data)
-            outputs3,_,_ = model3(adv_data)
+            logits1,_,_ = model1(adv_data)
+            logits2,_,_ = model2(adv_data)
+            logits3,_,_ = model3(adv_data)
+            logits = torch.stack([logits1,logits2,logits3])
+            logits = torch.max(logits,dim=0)
             if mixup:
                 raise NotImplementedError('not implemented')
             else:
-                loss = cal_loss(outputs1 + outputs2 + outputs3,None,labels)
+                loss = cal_loss(logits,None,labels)
 
             # print(torch.autograd.grad(loss,adv_data,create_graph=True))   
             loss.backward()
@@ -93,13 +95,15 @@ def pgd_attack_ensemble(model1,model2,model3,data,labels,eps=0.01,alpha=0.0002,i
                 max_loss=loss
                 best_examples=adv_data
 
-        outputs1,_,_ = model1(best_examples)
-        outputs2,_,_ = model2(best_examples)
-        outputs3,_,_ = model3(best_examples)
+        logits1,_,_ = model1(adv_data)
+        logits2,_,_ = model2(adv_data)
+        logits3,_,_ = model3(adv_data)
+        logits = torch.stack([logits1,logits2,logits3])
+        logits = torch.max(logits,dim=0)
         if mixup:
             raise NotImplementedError('not implemented')
         else:
-            loss = cal_loss(outputs1 + outputs2 + outputs3,None,labels)
+            loss = cal_loss(logits,None,labels)
         if loss > max_loss:
             max_loss=loss
             best_examples=adv_data.cpu()
