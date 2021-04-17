@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-04-15 14:14:20
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-16 20:25:01
+LastEditTime: 2021-04-16 20:27:58
 '''
 from __future__ import print_function
 import os
@@ -137,7 +137,7 @@ def adversarial(args,io,model=None, dataloader=None):
         # logits = logits1 + logits2 + logits3
 
         logits = torch.stack([logits1,logits2,logits3])
-        logits = torch.max(logits,dim=0)
+        logits = torch.max(logits,dim=0)[0]
 
         preds = logits.max(dim=1)[1]
         counter += batch_size
