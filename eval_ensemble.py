@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-04-15 14:14:20
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-18 17:52:46
+LastEditTime: 2021-04-18 18:05:12
 '''
 from __future__ import print_function
 import os
@@ -152,9 +152,9 @@ def adversarial(args,io,model=None, dataloader=None):
         # logits = torch.max(logits,dim=0)[0]
 
         val,preds = logits.max(dim=1)
-        if val == 1:
-            logits = logits1 + logits2 + logits3
-            val,preds = logits.max(dim=1)            
+        # if val == 1:
+        #     logits = logits1 + logits2 + logits3
+        #     val,preds = logits.max(dim=1)            
 
         counter += batch_size
         test_true.append(label.cpu().numpy())
