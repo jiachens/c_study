@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-04-15 14:14:20
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-16 20:27:58
+LastEditTime: 2021-04-18 17:52:46
 '''
 from __future__ import print_function
 import os
@@ -134,12 +134,28 @@ def adversarial(args,io,model=None, dataloader=None):
         logits2,_,_ = model2(adv_data)
         logits3,_,_ = model3(adv_data)
 
-        # logits = logits1 + logits2 + logits3
+        # logits1 = logits1.max(dim = 1)[1]
+        # logits2 = logits2.max(dim = 1)[1]
+        # logits3 = logits3.max(dim = 1)[1]
 
-        logits = torch.stack([logits1,logits2,logits3])
-        logits = torch.max(logits,dim=0)[0]
+        tmax1 = logits1.max(-1, keepdim=True)[0]
+        tmax2 = logits2.max(-1, keepdim=True)[0]
+        tmax3 = logits3.max(-1, keepdim=True)[0]
 
-        preds = logits.max(dim=1)[1]
+        output1 = torch.where(logits1 == tmax1, 1, 0)
+        output2 = torch.where(logits2 == tmax2, 1, 0)
+        output3 = torch.where(logits3 == tmax3, 1, 0)
+
+        logits = output1 + output2 + output3
+
+        # logits = torch.stack([logits1,logits2,logits3])
+        # logits = torch.max(logits,dim=0)[0]
+
+        val,preds = logits.max(dim=1)
+        if val == 1:
+            logits = logits1 + logits2 + logits3
+            val,preds = logits.max(dim=1)            
+
         counter += batch_size
         test_true.append(label.cpu().numpy())
         test_pred.append(preds.detach().cpu().numpy())
