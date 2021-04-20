@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-03-29 21:31:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-19 22:18:50
+LastEditTime: 2021-04-20 00:44:51
 '''
 from __future__ import print_function
 import os
@@ -128,7 +128,7 @@ def adversarial(args,io,model=None, dataloader=None):
         
             
         
-        print(adv_data - data)
+        # print(adv_data - data)
         logits,trans,trans_feat = model(adv_data)
         preds = logits.max(dim=1)[1]
         counter += batch_size
