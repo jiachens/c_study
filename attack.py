@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-18 17:54:03
+LastEditTime: 2021-04-19 22:19:40
 '''
 import time
 import torch
@@ -830,3 +830,50 @@ class APGDAttack():
                     print('restart {} - loss: {:.5f}'.format(counter, loss_best.sum()))
             
             return loss_best, adv_best
+
+
+def uniform_attack(model,data,eps):
+    model.eval()
+
+    adv_data=data.clone()
+    adv_data=adv_data+(torch.rand_like(adv_data)*eps*2-eps)
+    # adv_data = torch.clamp(data,-1,1)
+    adv_data.detach()
+
+    return adv_data.cuda()
+
+def gaussian_attack(model,data,eps):
+    model.eval()
+
+    adv_data=data.clone()
+    pert = torch.normal(0.0,1.0,size=adv_data.shape).cuda()
+    adv_data=torch.clamp(adv_data+pert,data-eps,data+eps)
+    # adv_data = torch.clamp(data,-1,1)
+    adv_data.detach()
+
+    return adv_data.cuda()
+
+def saliency(model,data,labels,number,iters):
+    model.eval()
+
+    adv_data=data.clone()
+    alpha = number // iters
+
+    for i in range(iters):
+        adv_data.requires_grad=True
+        outputs,_,trans = model(adv_data)
+        loss = cal_loss(outputs,None,labels)
+        loss.backward()
+        with torch.no_grad():
+            sphere_core = torch.median(adv_data, dim=2, keepdim=True)
+            sphere_r = torch.sqrt(torch.sum(torch.square(adv_data - sphere_core), dim=1))
+            sphere_axis = adv_data - sphere_core
+
+            sphere_map = - torch.multiply(torch.sum(torch.multiply(adv_data.grad, sphere_axis), dim=1), np.power(sphere_r, 2))
+            _,indice = torch.topk(sphere_map, k=adv_data.shape[0] - alpha, dim=2)
+            tmp = torch.zeros((adv_data.shape[0], 3, number))
+            for i in range(adv_data.shape[0]):
+                tmp[i] = adv_data[i][:,indice[i]]
+            adv_data = tmp.clone()
+            
+    return adv_data.cuda()

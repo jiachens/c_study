@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-03-29 21:31:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-13 23:03:26
+LastEditTime: 2021-04-19 22:18:50
 '''
 from __future__ import print_function
 import os
@@ -119,6 +119,13 @@ def adversarial(args,io,model=None, dataloader=None):
             adv_data = attack.mim(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,repeat=1,mixup=False)
         elif args.attack == 'mim_margin':
             adv_data = attack.mim_margin(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,repeat=1,mixup=False)
+        elif args.attack == 'gaussian':
+            adv_data = attack.gaussian_attack(model,data,args.eps)
+        elif args.attack == 'uniform':
+            adv_data = attack.uniform_attack(model,data,args.eps)
+        elif args.attack == 'saliency':
+            adv_data = attack.saliency(model,data,label,100,10)
+        
             
         
         print(adv_data - data)
