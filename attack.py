@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-20 01:02:12
+LastEditTime: 2021-04-20 12:27:54
 '''
 import time
 import torch
@@ -871,7 +871,7 @@ def saliency(model,data,labels,number,iters):
             sphere_axis = adv_data - sphere_core
 
             sphere_map = - torch.multiply(torch.sum(torch.multiply(adv_data.grad, sphere_axis), dim=1), torch.pow(sphere_r, 2))
-            _,indice = torch.topk(sphere_map, k=adv_data.shape[2] - alpha, dim=-1)
+            _,indice = torch.topk(sphere_map, k=adv_data.shape[2] - alpha, dim=-1, largest=False)
             tmp = torch.zeros((adv_data.shape[0], 3, adv_data.shape[2] - alpha))
             for i in range(adv_data.shape[0]):
                 tmp[i] = adv_data[i][:,indice[i]]
