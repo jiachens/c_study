@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-03-29 21:31:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-20 12:28:27
+LastEditTime: 2021-04-20 14:54:48
 '''
 from __future__ import print_function
 import os
@@ -123,8 +123,10 @@ def adversarial(args,io,model=None, dataloader=None):
             adv_data = attack.gaussian_attack(model,data,args.eps)
         elif args.attack == 'uniform':
             adv_data = attack.uniform_attack(model,data,args.eps)
-        elif args.attack == 'saliency':
-            adv_data = attack.saliency(model,data,label,100,10)
+        elif args.attack == 'saliency_100':
+            adv_data = attack.saliency(model,data,label,100,20)
+        elif args.attack == 'saliency_200':
+            adv_data = attack.saliency(model,data,label,200,40)
         
             
         
