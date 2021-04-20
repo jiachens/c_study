@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-19 22:36:51
+LastEditTime: 2021-04-19 22:42:58
 '''
 import time
 import torch
@@ -866,13 +866,13 @@ def saliency(model,data,labels,number,iters):
         loss = cal_loss(outputs,None,labels)
         loss.backward()
         with torch.no_grad():
-            sphere_core = torch.median(adv_data, dim=2, keepdim=True)
+            sphere_core,_ = torch.median(adv_data, dim=2, keepdim=True)
             sphere_r = torch.sqrt(torch.sum(torch.square(adv_data - sphere_core), dim=1))
             sphere_axis = adv_data - sphere_core
 
-            sphere_map = - torch.multiply(torch.sum(torch.multiply(adv_data.grad, sphere_axis), dim=1), np.power(sphere_r, 2))
+            sphere_map = - torch.multiply(torch.sum(torch.multiply(adv_data.grad, sphere_axis), dim=1), torch.power(sphere_r, 2))
             _,indice = torch.topk(sphere_map, k=adv_data.shape[0] - alpha, dim=2)
-            tmp = torch.zeros((adv_data.shape[0], 3, number))
+            tmp = torch.zeros((adv_data.shape[0], 3, adv_data.shape[0] - alpha))
             for i in range(adv_data.shape[0]):
                 tmp[i] = adv_data[i][:,indice[i]]
             adv_data = tmp.clone()
