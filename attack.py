@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-19 22:19:40
+LastEditTime: 2021-04-19 22:36:51
 '''
 import time
 import torch
@@ -847,7 +847,8 @@ def gaussian_attack(model,data,eps):
 
     adv_data=data.clone()
     pert = torch.normal(0.0,1.0,size=adv_data.shape).cuda()
-    adv_data=torch.clamp(adv_data+pert,data-eps,data+eps)
+    pert=torch.clamp(pert,-eps,eps)
+    adv_data += pert 
     # adv_data = torch.clamp(data,-1,1)
     adv_data.detach()
 
