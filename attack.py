@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-21 17:26:10
+LastEditTime: 2021-04-21 18:12:06
 '''
 import time
 import torch
@@ -882,7 +882,7 @@ def saliency(model,data,labels,number,iters):
 def random_drop(model,data,number):
     model.eval()
     adv_data=data.clone()
-    indices = torch.Tensor(np.random.choice(adv_data.shape[2], (adv_data.shape[0],adv_data.shape[2]-number)))
+    indices = torch.Tensor(np.random.choice(adv_data.shape[2], (adv_data.shape[0],adv_data.shape[2]-number))).long()
     tmp = torch.zeros((adv_data.shape[0], 3, adv_data.shape[2] - number))
     for i in range(adv_data.shape[0]):
         tmp[i] = adv_data[i][:,indices[i]]
