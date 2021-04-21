@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-03-29 21:31:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-20 14:54:48
+LastEditTime: 2021-04-21 17:10:49
 '''
 from __future__ import print_function
 import os
@@ -127,6 +127,10 @@ def adversarial(args,io,model=None, dataloader=None):
             adv_data = attack.saliency(model,data,label,100,20)
         elif args.attack == 'saliency_200':
             adv_data = attack.saliency(model,data,label,200,40)
+        elif args.attack == 'random_100':
+            adv_data = attack.random_drop(model,data,100)
+        elif args.attack == 'random_200':
+            adv_data = attack.random_drop(model,data,200)
         
             
         
