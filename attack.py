@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-21 23:00:22
+LastEditTime: 2021-04-22 00:13:31
 '''
 import time
 import torch
@@ -11,9 +11,9 @@ import numpy as np
 import torch.nn as nn
 import os
 import sys
-np.random.seed(666)
-torch.manual_seed(666)
-torch.cuda.manual_seed_all(666)
+# np.random.seed(666)
+# torch.manual_seed(666)
+# torch.cuda.manual_seed_all(666)
 torch.backends.cudnn.deterministic=True
 torch.backends.cudnn.benchmark = False
 import torch.nn.functional as F
