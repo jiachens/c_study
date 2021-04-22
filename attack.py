@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-21 18:12:06
+LastEditTime: 2021-04-21 21:59:42
 '''
 import time
 import torch
@@ -889,3 +889,47 @@ def random_drop(model,data,number):
     adv_data = tmp.clone()
 
     return adv_data.cuda()
+
+
+def pgd_adding_attack(model,data,labels,number,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=False):
+    model.eval()
+    max_loss = -1
+    best_examples=None
+    for i in range(repeat):
+        indices = torch.Tensor(np.random.choice(adv_data.shape[2], number)).long()
+        adv_data_og = data.clone()[:,:,indices]
+        adv_data = adv_data_og+(torch.rand_like(adv_data_og)*eps*2-eps)
+        # adv_data = torch.clamp(data,-1,1)
+        adv_data.detach()
+        for i in range(iters):
+            adv_data.requires_grad=True
+            input_data = torch.cat([data,adv_data],dim=-1)
+            outputs,_,trans = model(input_data)
+            if mixup:
+                loss = cross_entropy_with_probs(outputs,labels)
+            else:
+                loss = cal_loss(outputs,None,labels)
+            # print(torch.autograd.grad(loss,adv_data,create_graph=True))   
+            loss.backward()
+            with torch.no_grad():
+                adv_data = adv_data + alpha*adv_data.grad.sign()
+                delta = adv_data-adv_data_og
+                delta = torch.clamp(delta,-eps,eps)
+                adv_data = adv_data_og+delta
+               #If points outside the unit cube are invalid then
+                # adv_data = torch.clamp(adv_data,-1,1)
+            if loss > max_loss:
+                max_loss=loss
+                best_examples=adv_data
+
+        # outputs,_,trans = model(best_examples)
+        # if mixup:
+        #     loss = cross_entropy_with_probs(outputs,labels)
+        # else:
+        #     loss = cal_loss(outputs,None,labels)
+        # if loss > max_loss:
+        #     max_loss=loss
+        #     best_examples=adv_data.cpu()
+        best_examples_f = torch.cat([data,best_examples],dim=-1)
+            
+    return best_examples_f.cuda()
