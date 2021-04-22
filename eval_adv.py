@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-03-29 21:31:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-21 22:00:37
+LastEditTime: 2021-04-22 14:18:52
 '''
 from __future__ import print_function
 import os
@@ -135,7 +135,8 @@ def adversarial(args,io,model=None, dataloader=None):
             adv_data = attack.pgd_adding_attack(model,data,label,100,eps=args.eps,alpha=args.alpha,iters=args.test_iter,repeat=1,mixup=False)
         elif args.attack == 'add_200':
             adv_data = attack.pgd_adding_attack(model,data,label,200,eps=args.eps,alpha=args.alpha,iters=args.test_iter,repeat=1,mixup=False)
-            
+        elif args.attack == 'add_400':
+            adv_data = attack.pgd_adding_attack(model,data,label,400,eps=args.eps,alpha=args.alpha,iters=args.test_iter,repeat=1,mixup=False)    
         
         print(adv_data.shape)
         logits,trans,trans_feat = model(adv_data)

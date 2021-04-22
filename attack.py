@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-22 11:30:59
+LastEditTime: 2021-04-22 14:14:06
 '''
 import time
 import torch
@@ -915,21 +915,11 @@ def pgd_adding_attack(model,data,labels,number,eps=0.01,alpha=0.0002,iters=50,re
                 max_loss=loss
                 best_examples=adv_data
             with torch.no_grad():
-                adv_data = adv_data + alpha*adv_data.grad.sign()
-                delta = adv_data-adv_data_og
+                adv_data = adv_data + alpha * adv_data.grad.sign()
+                delta = adv_data - adv_data_og
                 delta = torch.clamp(delta,-eps,eps)
-                adv_data = adv_data_og+delta
-               #If points outside the unit cube are invalid then
-                # adv_data = torch.clamp(adv_data,-1,1)
+                adv_data = adv_data_og + delta
 
-        # outputs,_,trans = model(best_examples)
-        # if mixup:
-        #     loss = cross_entropy_with_probs(outputs,labels)
-        # else:
-        #     loss = cal_loss(outputs,None,labels)
-        # if loss > max_loss:
-        #     max_loss=loss
-        #     best_examples=adv_data.cpu()
         best_examples_f = torch.cat([data,best_examples],dim=-1)
             
     return best_examples_f.cuda()
