@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-22 00:13:31
+LastEditTime: 2021-04-22 11:30:59
 '''
 import time
 import torch
@@ -911,6 +911,9 @@ def pgd_adding_attack(model,data,labels,number,eps=0.01,alpha=0.0002,iters=50,re
                 loss = cal_loss(outputs,None,labels)
             # print(torch.autograd.grad(loss,adv_data,create_graph=True))   
             loss.backward()
+            if loss > max_loss:
+                max_loss=loss
+                best_examples=adv_data
             with torch.no_grad():
                 adv_data = adv_data + alpha*adv_data.grad.sign()
                 delta = adv_data-adv_data_og
@@ -918,9 +921,6 @@ def pgd_adding_attack(model,data,labels,number,eps=0.01,alpha=0.0002,iters=50,re
                 adv_data = adv_data_og+delta
                #If points outside the unit cube are invalid then
                 # adv_data = torch.clamp(adv_data,-1,1)
-            if loss > max_loss:
-                max_loss=loss
-                best_examples=adv_data
 
         # outputs,_,trans = model(best_examples)
         # if mixup:
