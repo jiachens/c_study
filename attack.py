@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-22 23:02:34
+LastEditTime: 2021-04-22 23:13:23
 '''
 import time
 import torch
@@ -896,7 +896,7 @@ def pgd_adding_attack(model,data,labels,number,eps=0.01,alpha=0.0002,iters=50,re
     max_loss = -1
     best_examples=None
     for i in range(repeat):
-        indices = torch.Tensor(np.random.choice(data.shape[2], number)).long()
+        indices = torch.Tensor(np.random.choice(data.shape[2], number, replace=False)).long()
         adv_data_og = data.clone()[:,:,indices]
         adv_data = adv_data_og+(torch.rand_like(adv_data_og)*eps*2-eps)
         # adv_data = torch.clamp(data,-1,1)
