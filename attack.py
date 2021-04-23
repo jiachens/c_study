@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-22 22:33:08
+LastEditTime: 2021-04-22 23:02:34
 '''
 import time
 import torch
@@ -916,9 +916,9 @@ def pgd_adding_attack(model,data,labels,number,eps=0.01,alpha=0.0002,iters=50,re
                 best_examples=adv_data
             with torch.no_grad():
                 adv_data = adv_data + alpha * adv_data.grad.sign()
-                # delta = adv_data - adv_data_og
-                # delta = torch.clamp(delta,-eps,eps)
-                adv_data = torch.clamp(adv_data,-1,1)
+                delta = adv_data - adv_data_og
+                delta = torch.clamp(delta,-eps,eps)
+                adv_data = adv_data_og + delta
 
         best_examples_f = torch.cat([data,best_examples],dim=-1)
             
