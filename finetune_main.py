@@ -209,7 +209,12 @@ def train(args, io):
             data = data.permute(0, 2, 1)
 
             if args.adversarial:
-                data = attack.pgd_attack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.train_iter,mixup=False) 
+                if args.attack == 'pgd':
+                    data = attack.pgd_attack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.train_iter,mixup=False) 
+                elif args.attack == 'add':
+                    data = attack.pgd_adding_attack(model,data,label,100,eps=args.eps,alpha=args.alpha,iters=args.train_iter,mixup=False)
+                elif args.attack == 'saliency':
+                    data = attack.saliency(model,data,label,100,args.train_iter)
                 model.train()
             opt.zero_grad()
             logits,trans,trans_feat = model(data)
@@ -367,7 +372,12 @@ def adversarial(args,io,model=None, dataloader=None):
         data, label = data.to(device).float(), label.to(device).long().squeeze()
         data = data.permute(0, 2, 1)
         batch_size = data.size()[0]
-        adv_data = attack.pgd_attack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,repeat=1,mixup=False)
+        if args.attack == 'pgd':
+            adv_data = attack.pgd_attack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,mixup=False) 
+        elif args.attack == 'add':
+            adv_data = attack.pgd_adding_attack(model,data,label,100,eps=args.eps,alpha=args.alpha,iters=args.test_iter,mixup=False)
+        elif args.attack == 'saliency':
+            adv_data = attack.saliency(model,data,label,100,20)
         logits,trans,trans_feat = model(adv_data)
         preds = logits.max(dim=1)[1]
         test_true.append(label.cpu().numpy())
@@ -445,6 +455,8 @@ if __name__ == "__main__":
                         help='Pretrained model path')
     parser.add_argument('--scheduler',type=str,default='default',
                         help="Which lr scheduler to use")
+    parser.add_argument('--attack',type=str,default='pgd',
+                        help="Which attack to use")
     args = parser.parse_args()
 
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
