@@ -215,8 +215,8 @@ def train(args, io):
                     data = attack.pgd_adding_attack(model,data,label,100,eps=args.eps,alpha=args.alpha,iters=args.train_iter,mixup=False)
                 elif args.attack == 'saliency':
                     data = attack.saliency(model,data,label,100,args.train_iter)
-                elif args.attack == 'add_200':
-                    data = attack.pgd_adding_attack(model,data,label,200,eps=args.eps,alpha=args.alpha,iters=args.train_iter,mixup=False)
+                elif args.attack == 'add_512':
+                    data = attack.pgd_adding_attack(model,data,label,512,eps=args.eps,alpha=args.alpha,iters=args.train_iter,mixup=False)
                 elif args.attack == 'saliency_200':
                     data = attack.saliency(model,data,label,200,args.train_iter)
                 model.train()
