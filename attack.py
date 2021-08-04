@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-25 00:48:01
+LastEditTime: 2021-08-03 21:53:38
 '''
 import time
 import torch
@@ -19,7 +19,7 @@ torch.backends.cudnn.benchmark = False
 import torch.nn.functional as F
 from util import cross_entropy_with_probs, cal_loss, margin_logit_loss, cal_loss_no_reduce, margin_logit_loss_reduce
  
-def pgd_attack(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=False):
+def pgd_attack(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=False,self=False):
     model.eval()
     max_loss = -1
     best_examples=None
@@ -30,7 +30,7 @@ def pgd_attack(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=F
         adv_data.detach()
         for i in range(iters):
             adv_data.requires_grad=True
-            outputs,_,trans = model(adv_data)
+            outputs,_,trans = model(adv_data,self)
             if mixup:
                 loss = cross_entropy_with_probs(outputs,labels)
             else:
@@ -48,7 +48,7 @@ def pgd_attack(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=F
                 max_loss=loss
                 best_examples=adv_data
 
-        outputs,_,trans = model(best_examples)
+        outputs,_,trans = model(best_examples,self)
         if mixup:
             loss = cross_entropy_with_probs(outputs,labels)
         else:
@@ -58,6 +58,7 @@ def pgd_attack(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=F
             best_examples=adv_data.cpu()
             
     return best_examples.cuda()
+
 
 def pgd_attack_ensemble(model1,model2,model3,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=False):
     model1.eval()
@@ -318,7 +319,7 @@ def bim(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=False):
             
     return best_examples.cuda()
 
-def pgd_attack_seg(model,data,labels,number,eps=0.01,alpha=0.0002,iters=50,repeat=1):
+def pgd_attack_seg(model,data,labels,number,eps=0.01,alpha=0.0002,iters=50,repeat=1,self=False):
     model.eval()
     max_loss = -1e5
     best_examples=None
@@ -329,7 +330,7 @@ def pgd_attack_seg(model,data,labels,number,eps=0.01,alpha=0.0002,iters=50,repea
         adv_data.detach()
         for i in range(iters):
             adv_data.requires_grad=True
-            logits,_,_ = model(adv_data)
+            logits,_,_ = model(adv_data,self)
             logits = logits.view(-1,number)
             labels = labels.view(-1,1)[:,0]
             loss= F.nll_loss(logits,labels)
@@ -347,7 +348,7 @@ def pgd_attack_seg(model,data,labels,number,eps=0.01,alpha=0.0002,iters=50,repea
                 max_loss=loss
                 best_examples=adv_data.cpu()
 
-        logits,_,_ = model(adv_data)
+        logits,_,_ = model(adv_data,self)
         logits = logits.view(-1,number)
         labels = labels.view(-1,1)[:,0]
         loss= F.nll_loss(logits,labels)

@@ -162,8 +162,10 @@ def train(args, io):
             if args.rotation:
                 rotated_data, rotation_label = aug_data.to(device).float(), aug_label.to(device).squeeze()
                 if args.adversarial:
-                    data = attack.pgd_attack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.train_iter,mixup=False) 
+                    rotated_data = attack.pgd_attack(model,rotated_data,rotation_label,eps=args.eps,alpha=args.alpha,iters=args.train_iter,mixup=False,self=True) 
                     model.train()
+                data = attack.pgd_attack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.train_iter,mixup=False) 
+                model.train()
                 opt.zero_grad()
                 logits,trans,trans_feat = model(data,rotation = False)
                 loss = criterion(logits, trans_feat, label)
@@ -186,8 +188,10 @@ def train(args, io):
             elif args.jigsaw:             
                 jigsaw_data, jigsaw_label = aug_data.to(device).float(), aug_label.to(device).squeeze().long()
                 if args.adversarial:
-                    data = attack.pgd_attack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.train_iter,mixup=False) 
+                    jigsaw_data = attack.pgd_attack_seg(model,jigsaw_data,jigsaw_label,args.k1**3,eps=args.eps,alpha=args.alpha,iters=args.train_iter,self=True) 
                     model.train()
+                data = attack.pgd_attack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.train_iter,mixup=False) 
+                model.train()
                 opt.zero_grad()
                 logits,trans,trans_feat = model(data,jigsaw = False)
                 loss = criterion(logits, trans_feat, label)
