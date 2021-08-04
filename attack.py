@@ -3,14 +3,16 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-08-04 02:03:34
+LastEditTime: 2021-08-04 17:07:10
 '''
 import time
+from matplotlib.pyplot import step
 import torch
 import numpy as np
 import torch.nn as nn
 import os
 import sys
+import torch.optim as optim
 # np.random.seed(666)
 # torch.manual_seed(666)
 # torch.cuda.manual_seed_all(666)
@@ -30,7 +32,10 @@ def pgd_attack(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=F
         adv_data.detach()
         for i in range(iters):
             adv_data.requires_grad=True
-            outputs,_,trans = model(adv_data,self)
+            try:
+                outputs,_,trans = model(adv_data,self)
+            except:
+                outputs,_,trans = model(adv_data)
             if mixup:
                 loss = cross_entropy_with_probs(outputs,labels)
             else:
@@ -47,8 +52,11 @@ def pgd_attack(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=F
             if loss > max_loss:
                 max_loss=loss
                 best_examples=adv_data
-
-        outputs,_,trans = model(best_examples,self)
+        
+        try:
+            outputs,_,trans = model(best_examples,self)
+        except:
+            outputs,_,trans = model(best_examples)
         if mixup:
             loss = cross_entropy_with_probs(outputs,labels)
         else:
@@ -924,3 +932,116 @@ def pgd_adding_attack(model,data,labels,number,eps=0.01,alpha=0.0002,iters=50,re
         best_examples_f = torch.cat([data,best_examples],dim=-1)
             
     return best_examples_f.cuda()
+
+
+def cwattack(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=False,self=False):
+    def f(x):
+        outputs,_,_ = model(x)
+        one_hot_labels = torch.eye(len(outputs[0]))[labels].cuda()
+
+        j = torch.masked_select(outputs, one_hot_labels.bool())
+        i, _ = torch.max((1-one_hot_labels)*outputs - (one_hot_labels * 10000), dim=1)
+        
+        return torch.clamp(j-i, min=-0)
+
+    model.eval()
+    min_loss = 1e5
+    best_examples=None
+    for i in range(repeat):
+        adv_data=data.clone()
+        adv_data=adv_data+(torch.rand_like(adv_data)*eps*2-eps)
+        # adv_data = torch.clamp(data,-1,1)
+        adv_data.detach()
+        for i in range(iters):
+            adv_data.requires_grad=True
+            # outputs,_,trans = model(adv_data,self)
+            loss = torch.sum(f(adv_data))
+            # print(loss)
+            # print(torch.autograd.grad(loss,adv_data,create_graph=True))   
+            loss.backward()
+            with torch.no_grad():
+                adv_data = adv_data - alpha*adv_data.grad.sign()
+                delta = adv_data-data
+                delta = torch.clamp(delta,-eps,eps)
+                adv_data = data+delta
+               #If points outside the unit cube are invalid then
+                # adv_data = torch.clamp(adv_data,-1,1)
+            if loss < min_loss:
+                min_loss=loss
+                best_examples=adv_data
+
+        loss = torch.sum(f(adv_data))
+        if loss < min_loss:
+            min_loss=loss
+            best_examples=adv_data.cpu()
+            
+    return best_examples.cuda()
+
+
+
+
+DECREASE_FACTOR = 0.9
+CONSTANT_FACTOR = 2
+
+
+def cw_li_attack(model, images, labels, targeted=False, c=1e-4, kappa=0, max_iter=1000, learning_rate=0.01) :
+
+    images = torch.unsqueeze(images,0)
+    # print(images.shape)
+    labels = torch.unsqueeze(labels,0)
+
+    # Define f-function
+    def f(x):
+        
+        outputs,_,_ = model(x)
+        one_hot_labels = torch.eye(len(outputs[0]))[labels].cuda()
+
+        i, _ = torch.max((1-one_hot_labels)*outputs, dim=1)
+        j = torch.masked_select(outputs, one_hot_labels.bool())
+        
+        # If targeted, optimize for making the other class most likely 
+        if targeted :
+            return torch.clamp(i-j, min=-kappa)
+        
+        # If untargeted, optimize for making the other class most likely 
+        else :
+            return torch.clamp(j-i, min=-kappa)
+    
+    w = torch.zeros_like(images, requires_grad=True)
+
+    optimizer = optim.Adam([w], lr=learning_rate)
+
+    prev = 1e10
+    tau = 0.1
+    step = 0
+    while tau > 0.05 and step < max_iter:
+
+        a = nn.Tanh()(w)
+
+        loss1 = torch.clamp(torch.max(torch.abs(a - images) - tau), min = 0)
+        loss2 = torch.sum(c*f(a))
+
+        cost = loss1 + loss2
+
+        optimizer.zero_grad()
+        cost.backward()
+        optimizer.step()
+
+        # # Early Stop when loss does not converge.
+        # if step % (max_iter//10) == 0 :
+        #     if cost > prev :
+        #         print('Attack Stopped due to CONVERGENCE....')
+        #         return a
+        #     prev = cost
+        
+        print('- Learning Progress : %2.2f %%        ' %((step+1)/max_iter*100), end='\r')
+        step += 1
+
+        tau *= DECREASE_FACTOR
+
+    attack_images = nn.Tanh()(w)
+
+    if torch.max(torch.abs(attack_images - images)) > 0.05:
+        return torch.squeeze(images)
+
+    return torch.squeeze(attack_images)

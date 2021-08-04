@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-02-16 21:25:32
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-12 16:10:59
+LastEditTime: 2021-08-04 16:08:03
 '''
 
 import os
@@ -764,6 +764,7 @@ class PointNet_Simple(nn.Module):
         self.linear100 = nn.Linear(256,40)
 
     def forward(self, x):
+        batch_size = x.shape[0]
         # trans = self.stn(x)
         # x = x.transpose(2, 1)
         # x = torch.bmm(x, trans)
@@ -777,7 +778,7 @@ class PointNet_Simple(nn.Module):
         x = F.relu(self.bn3(self.conv3(x)))
         x = F.relu(self.bn4(self.conv4(x)))
         x = F.relu(self.bn5(self.conv5(x)))
-        x = F.adaptive_max_pool1d(x, 1).squeeze()
+        x = F.adaptive_max_pool1d(x, 1).view(batch_size, -1)
         x = F.relu(self.bn6(self.linear1(x)))
         x = self.dp1(x)
         x = F.relu(self.bn7(self.linear2(x)))
@@ -814,6 +815,7 @@ class PointNet_Simple_Rotation(nn.Module):
         self.linear3 = nn.Linear(256,args.angles)
 
     def forward(self, x):
+        batch_size = x.shape[0]
         # trans = self.stn(x)
         # x = x.transpose(2, 1)
         # x = torch.bmm(x, trans)
@@ -827,7 +829,7 @@ class PointNet_Simple_Rotation(nn.Module):
         x = F.relu(self.bn3(self.conv3(x)))
         x = F.relu(self.bn4(self.conv4(x)))
         x = F.relu(self.bn5(self.conv5(x)))
-        x = F.adaptive_max_pool1d(x, 1).squeeze()
+        x = F.adaptive_max_pool1d(x, 1).view(batch_size, -1)
         x = F.relu(self.bn6(self.linear1(x)))
         x = self.dp1(x)
         x = F.relu(self.bn7(self.linear2(x)))
@@ -931,7 +933,7 @@ class PointNet_Simple_Jigsaw(nn.Module):
         x = F.relu(self.bn3(self.conv3(x)))
         x = F.relu(self.bn4(self.conv4(x)))
         x = F.relu(self.bn5(self.conv5(x)))
-        x = F.adaptive_max_pool1d(x, 1).squeeze()
+        x = F.adaptive_max_pool1d(x, 1).view(batchsize, -1)
         feature_interest = x
         
         x = x.view(-1, 1024, 1).repeat(1, 1, self.args.num_points)
