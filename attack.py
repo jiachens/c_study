@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-08-03 21:53:38
+LastEditTime: 2021-08-04 02:03:34
 '''
 import time
 import torch
@@ -76,9 +76,9 @@ def pgd_attack_ensemble(model1,model2,model3,data,labels,eps=0.01,alpha=0.0002,i
             logits1,_,_ = model1(adv_data)
             logits2,_,_ = model2(adv_data)
             logits3,_,_ = model3(adv_data)
-            logits = logits1 + logits2 + logits3
-            # logits = torch.stack([logits1,logits2,logits3])
-            # logits = torch.max(logits,dim=0)[0]
+            # logits = logits1 + logits2 + logits3
+            logits = torch.stack([logits1,logits2,logits3])
+            logits = torch.max(logits,dim=0)[0]
             if mixup:
                 raise NotImplementedError('not implemented')
             else:
@@ -100,9 +100,9 @@ def pgd_attack_ensemble(model1,model2,model3,data,labels,eps=0.01,alpha=0.0002,i
         logits1,_,_ = model1(adv_data)
         logits2,_,_ = model2(adv_data)
         logits3,_,_ = model3(adv_data)
-        # logits = torch.stack([logits1,logits2,logits3])
-        # logits = torch.max(logits,dim=0)[0]
-        logits = logits1 + logits2 + logits3
+        logits = torch.stack([logits1,logits2,logits3])
+        logits = torch.max(logits,dim=0)[0]
+        # logits = logits1 + logits2 + logits3
         if mixup:
             raise NotImplementedError('not implemented')
         else:
