@@ -1,13 +1,13 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""
-@Author: Jiachen Sun
-@Contact: jiachens@umich.edu
-@File: main.py
-"""
-
+'''
+Description: 
+Autor: Jiachen Sun
+Date: 2021-08-04 21:56:20
+LastEditors: Jiachen Sun
+LastEditTime: 2021-08-04 22:48:49
+'''
 
 from __future__ import print_function
+from itertools import permutations
 import os
 import argparse
 import torch
@@ -16,7 +16,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import CosineAnnealingLR, ExponentialLR, StepLR, MultiStepLR, ReduceLROnPlateau
 from data import PCData_SSL, PCData, PCData_Jigsaw
-from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, PointNet, DGCNN, PointNet_Simple, Pct, DeepSym
+from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, PointNet, DGCNN, PointNet_Simple, Pct, DeepSym, DGCNN_Generative
 import numpy as np
 from torch.utils.data import DataLoader
 import sys
@@ -147,14 +147,16 @@ def train(args, io):
     print(str(model))
 
     model = nn.DataParallel(model)
+    gan = DGCNN_Generative(args).to(device)
+
     print("Let's use", torch.cuda.device_count(), "GPUs!")
 
     if args.use_sgd:
         print("Use SGD")
-        opt = optim.SGD(model.parameters(), lr=args.lr*100, momentum=args.momentum)
+        opt = optim.SGD(gan.parameters(), lr=args.lr*100, momentum=args.momentum)
     else:
         print("Use Adam")
-        opt = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
+        opt = optim.Adam(filter(lambda p: p.requires_grad, gan.parameters()), lr=args.lr)
 
     
     if args.scheduler == 'default':
@@ -164,9 +166,7 @@ def train(args, io):
     elif args.scheduler == 'cosine':
         scheduler = CosineAnnealingLR(opt, args.epochs, eta_min=0.00001)
     elif args.scheduler == 'piecewise':
-        scheduler = MultiStepLR(opt, milestones=[100,150,200], gamma=0.1)
-    elif args.scheduler == 'piecewise_1':
-        scheduler = MultiStepLR(opt, milestones=[40,80,120], gamma=0.1)
+        scheduler = MultiStepLR(opt, milestones=[50,75,100], gamma=0.1)
     elif args.scheduler == 'pct':
         scheduler = CosineAnnealingLR(opt, args.epochs, eta_min=args.lr)
 
@@ -195,7 +195,8 @@ def train(args, io):
 
         train_loss = 0.0
         count = 0.0
-        model.train()
+        model.eval()
+        gan.train()
         train_pred = []
         train_true = []
 
@@ -207,22 +208,11 @@ def train(args, io):
             data, label = data.to(device).float(), label.to(device).long().squeeze()
             batch_size, N, C = data.size()
             data = data.permute(0, 2, 1)
-
-            if args.adversarial:
-                if args.attack == 'pgd':
-                    data = attack.pgd_attack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.train_iter,mixup=False) 
-                elif args.attack == 'add':
-                    data = attack.pgd_adding_attack(model,data,label,100,eps=args.eps,alpha=args.alpha,iters=args.train_iter,mixup=False)
-                elif args.attack == 'saliency':
-                    data = attack.saliency(model,data,label,100,args.train_iter)
-                elif args.attack == 'add_512':
-                    data = attack.pgd_adding_attack(model,data,label,512,eps=args.eps,alpha=args.alpha,iters=args.train_iter,mixup=False)
-                elif args.attack == 'saliency_200':
-                    data = attack.saliency(model,data,label,200,args.train_iter)
-                model.train()
             opt.zero_grad()
+            perturbation = gan(data)
+            data += perturbation
             logits,trans,trans_feat = model(data)
-            loss = criterion(logits, trans_feat, label)
+            loss = -criterion(logits, trans_feat, label)
             loss.backward()
             opt.step()
             preds = logits.max(dim=1)[1]
@@ -247,27 +237,26 @@ def train(args, io):
         else:
             scheduler.step()
         
-        acc = test(args,io,model=model, dataloader = test_loader)
+        acc = test(args,io,model=model, gan=gan, dataloader = test_loader)
 
         if epoch % 10 == 0 or epoch == args.epochs-1:
-            if epoch == args.epochs-1:
-                args.test_iter = 200
-                args.alpha = 0.005
-                io.cprint('Best epoch: %d' % best_epoch)
-                io.cprint('Best model in 7-step test:')
-                adversarial(args,io,model=best_model, dataloader = test_loader)
-                torch.save(best_model.state_dict(), args.pre_path+'finetune_checkpoints/%s/models/model_best.t7' % (args.exp_name))
+            # if epoch == args.epochs-1:
+            #     args.test_iter = 200
+            #     args.alpha = 0.005
+            #     io.cprint('Best epoch: %d' % best_epoch)
+            #     io.cprint('Best model in 7-step test:')
+            #     adversarial(args,io,model=best_model, dataloader = test_loader)
+            #     torch.save(best_model.state_dict(), args.pre_path+'finetune_checkpoints/%s/models/model_best.t7' % (args.exp_name))
 
-            acc_adv = adversarial(args,io,model=model, dataloader = test_loader)
-            if acc_adv > best_test_acc_adv:
-                best_model = model
-                best_epoch = epoch
-                best_test_acc_adv = acc_adv
-
-            torch.save(model.state_dict(), args.pre_path+'finetune_checkpoints/%s/models/model_epoch%d.t7' % (args.exp_name,epoch))
+            # acc_adv = adversarial(args,io,model=model, dataloader = test_loader)
+            # if acc_adv > best_test_acc_adv:
+            #     best_model = model
+            #     best_epoch = epoch
+            #     best_test_acc_adv = acc_adv
+            torch.save(gan.state_dict(), args.pre_path+'finetune_checkpoints/%s/models/gan_epoch%d.t7' % (args.exp_name,epoch))
     return model
 
-def test(args, io,model=None, dataloader=None):
+def test(args, io,model=None, gan=None, dataloader=None):
 
     if dataloader == None:
         test_loader = DataLoader(PCData(name=args.dataset,partition='test', num_points=args.num_points), num_workers=8,
@@ -303,7 +292,8 @@ def test(args, io,model=None, dataloader=None):
         model = nn.DataParallel(model)
         model.load_state_dict(torch.load(args.model_path))
 
-    model = model.eval()
+    model.eval()
+    gan.eval()
     test_acc = 0.0
     count = 0.0
     test_true = []
@@ -314,6 +304,8 @@ def test(args, io,model=None, dataloader=None):
         data = data.permute(0, 2, 1)
         batch_size = data.size()[0]
         # print(data.shape)
+        perturbation = gan(data)
+        data += perturbation
         logits,trans,trans_feat = model(data)
         # if args.jigsaw:
         #     logits = logits.view(-1,args.k1**3)
@@ -331,72 +323,6 @@ def test(args, io,model=None, dataloader=None):
 
     return test_acc
 
-
-def adversarial(args,io,model=None, dataloader=None):
-
-    if dataloader == None:
-        test_loader = DataLoader(PCData(name=args.dataset,partition='test', num_points=args.num_points), num_workers=8,
-                             batch_size=args.test_batch_size, shuffle=False, drop_last=False)
-    else:
-        test_loader = dataloader
-
-    device = torch.device("cuda" if args.cuda else "cpu")
-
-    if args.dataset == 'modelnet40':
-        output_channel = 40
-    elif args.dataset == 'modelnet10':
-        output_channel = 10
-    elif args.dataset == 'scanobjectnn':
-        output_channel = 15
-    elif args.dataset == 'shapenet':
-        output_channel = 57
-    #Try to load models
-    if model is None:
-        if args.model == 'pointnet':
-            model = PointNet(args,output_channels=output_channel).to(device)
-        elif args.model == 'dgcnn':
-            model = DGCNN(args,output_channels=output_channel).to(device)
-        elif args.model == 'pointnet_simple':
-            model = PointNet_Simple(args,output_channels=output_channel).to(device)
-        elif args.model == 'pct':
-            model = Pct(args,output_channels=output_channel).to(device)
-        elif args.model == 'deepsym':
-            model = DeepSym(args).to(device)
-        else:
-            raise Exception("Not implemented")
-        model = nn.DataParallel(model)
-        model.load_state_dict(torch.load(args.model_path))
-
-    model = model.eval()
-    test_acc = 0.0
-    count = 0.0
-    test_true = []
-    test_pred = []
-    for data, label,_,_ in test_loader:
-        data, label = data.to(device).float(), label.to(device).long().squeeze()
-        data = data.permute(0, 2, 1)
-        batch_size = data.size()[0]
-        if args.attack == 'pgd':
-            adv_data = attack.pgd_attack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.test_iter,mixup=False) 
-        elif args.attack == 'add':
-            adv_data = attack.pgd_adding_attack(model,data,label,100,eps=args.eps,alpha=args.alpha,iters=args.test_iter,mixup=False)
-        elif args.attack == 'saliency':
-            adv_data = attack.saliency(model,data,label,100,20)
-        elif args.attack == 'add_200':
-            adv_data = attack.pgd_adding_attack(model,data,label,200,eps=args.eps,alpha=args.alpha,iters=args.test_iter,mixup=False)
-        elif args.attack == 'saliency_200':
-            adv_data = attack.saliency(model,data,label,200,40)
-        logits,trans,trans_feat = model(adv_data)
-        preds = logits.max(dim=1)[1]
-        test_true.append(label.cpu().numpy())
-        test_pred.append(preds.detach().cpu().numpy())
-    test_true = np.concatenate(test_true)
-    test_pred = np.concatenate(test_pred)
-    test_acc = metrics.accuracy_score(test_true, test_pred)
-    avg_per_class_acc = metrics.balanced_accuracy_score(test_true, test_pred)
-    outstr = 'Adversarial :: ADV_test acc: %.6f, ADV_test avg acc: %.6f'%(test_acc, avg_per_class_acc)
-    io.cprint(outstr)
-    return test_acc
 
 if __name__ == "__main__":
     # Training settings
@@ -489,8 +415,8 @@ if __name__ == "__main__":
         model=train(args,io)
         end = time.time()
         io.cprint("Training took %.6f hours" % ((end - start)/3600))
-    else:
-        # EPS=args.eps
-        # ALPHA=args.alpha
-        # TEST_ITER=args.test_iter
-        adversarial(args,io,model=model)
+    # else:
+    #     # EPS=args.eps
+    #     # ALPHA=args.alpha
+    #     # TEST_ITER=args.test_iter
+    #     adversarial(args,io,model=model)
