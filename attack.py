@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-08-04 17:07:10
+LastEditTime: 2021-08-05 19:51:58
 '''
 import time
 from matplotlib.pyplot import step
@@ -940,7 +940,7 @@ def cwattack(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=Fal
         one_hot_labels = torch.eye(len(outputs[0]))[labels].cuda()
 
         j = torch.masked_select(outputs, one_hot_labels.bool())
-        i, _ = torch.max((1-one_hot_labels)*outputs - (one_hot_labels * 10000), dim=1)
+        i, _ = torch.max((1-one_hot_labels)*outputs, dim=1)
         
         return torch.clamp(j-i, min=-0)
 
