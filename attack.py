@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-08-05 19:51:58
+LastEditTime: 2021-08-05 22:44:52
 '''
 import time
 from matplotlib.pyplot import step
@@ -942,7 +942,7 @@ def cwattack(model,data,labels,eps=0.01,alpha=0.0002,iters=50,repeat=1,mixup=Fal
         j = torch.masked_select(outputs, one_hot_labels.bool())
         i, _ = torch.max((1-one_hot_labels)*outputs, dim=1)
         
-        return torch.clamp(j-i, min=-0)
+        return torch.clamp(i-j, min=-0)
 
     model.eval()
     min_loss = 1e5
