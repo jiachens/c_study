@@ -5,13 +5,14 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-02-16 17:42:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-12 16:54:04
+LastEditTime: 2021-08-07 00:45:12
 '''
 
 
 from __future__ import print_function
 import os
 import argparse
+from numpy.core.fromnumeric import argmax
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -53,11 +54,43 @@ def set_bn_eval(m):
       m.eval()
 
 
+def info_nce_loss(self, features):
+
+    labels = torch.cat([torch.arange(self.args.batch_size) for i in range(self.args.n_views)], dim=0)
+    labels = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
+    labels = labels.to(self.args.device)
+
+    features = F.normalize(features, dim=1)
+
+    similarity_matrix = torch.matmul(features, features.T)
+    # assert similarity_matrix.shape == (
+    #     self.args.n_views * self.args.batch_size, self.args.n_views * self.args.batch_size)
+    # assert similarity_matrix.shape == labels.shape
+
+    # discard the main diagonal from both: labels and similarities matrix
+    mask = torch.eye(labels.shape[0], dtype=torch.bool).to(self.args.device)
+    labels = labels[~mask].view(labels.shape[0], -1)
+    similarity_matrix = similarity_matrix[~mask].view(similarity_matrix.shape[0], -1)
+    # assert similarity_matrix.shape == labels.shape
+
+    # select and combine multiple positives
+    positives = similarity_matrix[labels.bool()].view(labels.shape[0], -1)
+
+    # select only the negatives the negatives
+    negatives = similarity_matrix[~labels.bool()].view(similarity_matrix.shape[0], -1)
+
+    logits = torch.cat([positives, negatives], dim=1)
+    labels = torch.zeros(logits.shape[0], dtype=torch.long).to(self.args.device)
+
+    logits = logits / self.args.temperature
+    return logits, labels
+
 def train(args, io):
 
     train_loader = DataLoader(PCData_SSL(name=args.dataset, partition='train', num_points=args.num_points, rotation=args.rotation, angles=args.angles, jigsaw=args.jigsaw, k=args.k1, 
                                 noise=args.noise, level=args.level), num_workers=8,
                               batch_size=args.batch_size, shuffle=True, drop_last=True)
+                              
     test_loader = DataLoader(PCData_SSL(name=args.dataset,partition='test', num_points=args.num_points, rotation=args.rotation, angles=args.angles, jigsaw=args.jigsaw, k=args.k1, 
                             noise=args.noise, level=args.level), num_workers=8,
                              batch_size=args.test_batch_size, shuffle=False, drop_last=False)
@@ -141,6 +174,8 @@ def train(args, io):
             train_loss_jigsaw = 0.0
             train_pred_jigsaw = []
             train_true_jigsaw = []
+        if args.contrast:
+            train_loss_contrast = 0.0
 
         for aug_data, aug_label in train_loader:
             # print(rotated_data.shape)
@@ -176,6 +211,22 @@ def train(args, io):
                 train_loss_rotation += loss_rotation.item() * batch_size
                 train_true_rotation.append(rotation_label.cpu().numpy())
                 train_pred_rotation.append(preds_rotation.detach().cpu().numpy())    
+            elif args.contrast:
+                rotated_data, rotation_label = aug_data.to(device).float(), aug_label.to(device).squeeze()
+                opt.zero_grad()
+
+                _,_,trans_feat = model(rotated_data)
+                c_logits, c_labels = info_nce_loss(trans_feat)
+                loss_contrast = criterion(c_logits, trans_feat, c_labels)
+                loss_contrast.backward()
+                opt.step()
+                # preds = logits.max(dim=1)[1]
+                count += batch_size 
+
+                # preds_rotation = logits_rotation.max(dim=1)[1]
+                train_loss_contrast += loss_rotation.item() * batch_size
+                # train_true_rotation.append(rotation_label.cpu().numpy())
+                # train_pred_rotation.append(preds_rotation.detach().cpu().numpy())  
 
             elif args.jigsaw:             
                 jigsaw_data, jigsaw_label = aug_data.to(device).float(), aug_label.to(device).squeeze().long()
@@ -240,6 +291,11 @@ def train(args, io):
                                                                                          train_true_jigsaw, train_pred_jigsaw),
                                                                                      metrics.balanced_accuracy_score(
                                                                                          train_true_jigsaw, train_pred_jigsaw)
+
+                                                                                     )
+        elif args.contrast:
+            outstr = 'Train %d, loss_contrast: %.6f' % (epoch,
+                                                                                     train_loss_contrast*1.0/count
 
                                                                                      )
 
