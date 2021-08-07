@@ -5,7 +5,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-02-16 17:42:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-08-07 00:49:03
+LastEditTime: 2021-08-07 01:36:46
 '''
 
 
@@ -19,7 +19,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import CosineAnnealingLR, ExponentialLR, StepLR, MultiStepLR, ReduceLROnPlateau
 from data import PCData_SSL, PCData, PCData_Jigsaw
-from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, DGCNN_Jigsaw, DeepSym_Rotation, DeepSym_Jigsaw, Pct_Jigsaw, Pct_Rotation, PointNet_Simple_Rotation, PointNet_Simple_Jigsaw, DGCNN_Noise, PointNet_Simple_Noise
+from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, DGCNN_Jigsaw, DeepSym_Rotation, DeepSym_Jigsaw, Pct_Jigsaw, Pct_Rotation, PointNet_Simple_Rotation, PointNet_Simple_Jigsaw, DGCNN_Noise, PointNet_Simple_Noise,Pct_Contrast,DGCNN_Contrast,PointNet_Simple_Contrast
 import numpy as np
 from torch.utils.data import DataLoader
 import sys
@@ -88,11 +88,11 @@ def info_nce_loss(self, features):
 def train(args, io):
 
     train_loader = DataLoader(PCData_SSL(name=args.dataset, partition='train', num_points=args.num_points, rotation=args.rotation, angles=args.angles, jigsaw=args.jigsaw, k=args.k1, 
-                                noise=args.noise, level=args.level), num_workers=8,
+                                noise=args.noise, level=args.level, contrast=args.contrast), num_workers=8,
                               batch_size=args.batch_size, shuffle=True, drop_last=True)
                               
     test_loader = DataLoader(PCData_SSL(name=args.dataset,partition='test', num_points=args.num_points, rotation=args.rotation, angles=args.angles, jigsaw=args.jigsaw, k=args.k1, 
-                            noise=args.noise, level=args.level), num_workers=8,
+                            noise=args.noise, level=args.level, contrast=args.contrast), num_workers=8,
                              batch_size=args.test_batch_size, shuffle=False, drop_last=False)
 
     device = torch.device("cuda" if args.cuda else "cpu")
@@ -122,6 +122,12 @@ def train(args, io):
         model = PointNet_Simple_Jigsaw(args).to(device)
     elif args.model == 'pointnet_simple_noise':
         model = PointNet_Simple_Noise(args).to(device)
+    elif args.model == 'pointnet_simple_contrast':
+        model = PointNet_Simple_Contrast(args).to(device)
+    elif args.model == 'dgcnn_contrast':
+        model = DGCNN_Contrast(args).to(device)
+    elif args.model == 'pct_contrast':
+        model = Pct_Contrast(args).to(device)
     else:
         raise Exception("Not implemented")
 
@@ -181,9 +187,15 @@ def train(args, io):
             # print(rotated_data.shape)
             # print(rotation_label.shape)
             # data, label = data.to(device), label.to(device).squeeze()
-            batch_size, N, C = aug_data.size()
+            if not args.contrast:
+                batch_size, N, C = aug_data.size()
 
-            aug_data = aug_data.permute(0, 2, 1)
+                aug_data = aug_data.permute(0, 2, 1)
+            else:
+                
+                batch_size,_, N, C = aug_data.size()
+
+                aug_data = aug_data.permute(1, 0, 3, 2)
 
             if args.rotation or args.noise:
                 rotated_data, rotation_label = aug_data.to(device).float(), aug_label.to(device).squeeze()
@@ -212,10 +224,15 @@ def train(args, io):
                 train_true_rotation.append(rotation_label.cpu().numpy())
                 train_pred_rotation.append(preds_rotation.detach().cpu().numpy())    
             elif args.contrast:
+
                 rotated_data, rotation_label = aug_data.to(device).float(), aug_label.to(device).squeeze()
+                print(rotated_data.shape)
+                rotated_data_1 = rotated_data[0]
+                rotated_data_2 = rotated_data[1]
+
                 opt.zero_grad()
 
-                _,_,trans_feat = model(rotated_data)
+                _,_,trans_feat = model(rotated_data_1)
                 c_logits, c_labels = info_nce_loss(trans_feat)
                 loss_contrast = criterion(c_logits, trans_feat, c_labels)
                 loss_contrast.backward()
@@ -296,13 +313,13 @@ def train(args, io):
         elif args.contrast:
             outstr = 'Train %d, loss_contrast: %.6f' % (epoch,
                                                                                      train_loss_contrast*1.0/count
-
                                                                                      )
 
         io.cprint(outstr)
         scheduler.step()
         
-        test(args,io,model=model, dataloader = test_loader)
+        if not args.contrast:
+            test(args,io,model=model, dataloader = test_loader)
         # io.cprint(outstr)
 
         # test_train(args,io,model=model, dataloader = train_loader)
@@ -454,8 +471,6 @@ if __name__ == "__main__":
     parser.add_argument('--exp_name', type=str, default='exp', metavar='N',
                         help='Name of the experiment')
     parser.add_argument('--model', type=str, default='dgcnn', metavar='N',
-                        choices=['pointnet_rotation', 'dgcnn_rotation', 'pointnet_jigsaw', 'dgcnn_jigsaw', 'deepsym_jigsaw', 'deepsym_rotation','pct_rotation',
-                            'pct_jigsaw','pointnet_simple_rotation','pointnet_simple_jigsaw','dgcnn_noise','pointnet_simple_noise'],
                         help='Model to use, [pointnet, dgcnn]')
     parser.add_argument('--dataset', type=str, default='modelnet40', metavar='N')
     parser.add_argument('--batch_size', type=int, default=32, metavar='batch_size',

@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-02-16 21:25:32
 LastEditors: Jiachen Sun
-LastEditTime: 2021-08-04 22:31:51
+LastEditTime: 2021-08-07 01:23:06
 '''
 
 import os
@@ -288,6 +288,78 @@ class Pct_Rotation(nn.Module):
         x = self.dp2(x)
         feature_interest = x
         x = self.linear100(x)
+
+        return x, feature_interest, None
+
+
+class Pct_Contrast(nn.Module):
+    def __init__(self, args, output_channels=40):
+        super(Pct_Contrast, self).__init__()
+        self.args = args
+        self.conv1 = nn.Conv1d(3, 64, kernel_size=1, bias=False)
+        self.conv2 = nn.Conv1d(64, 64, kernel_size=1, bias=False)
+        self.bn1 = nn.BatchNorm1d(64)
+        self.bn2 = nn.BatchNorm1d(64)
+        self.bn3 = nn.BatchNorm2d(128)
+        self.bn4 = nn.BatchNorm2d(256)
+        # self.gather_local_0 = Local_op(in_channels=128, out_channels=128)
+        # self.gather_local_1 = Local_op(in_channels=256, out_channels=256)
+
+        self.seq1 = nn.Sequential(nn.Conv2d(128, 128, kernel_size=1, bias=False),
+                                   self.bn3,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.seq2 = nn.Sequential(nn.Conv2d(256, 256, kernel_size=1, bias=False),
+                                   self.bn4,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.pool1 = MAXPOOL()
+        self.pool2 = MAXPOOL()
+
+        self.pt_last = Point_Transformer_Last(args)
+
+        self.conv_fuse = nn.Sequential(nn.Conv1d(1280, 1024, kernel_size=1, bias=False),
+                                    nn.BatchNorm1d(1024),
+                                    nn.LeakyReLU(negative_slope=0.2))
+
+
+        self.linear1001 = nn.Linear(1024, 512, bias=False)
+        self.bn6001 = nn.BatchNorm1d(512)
+        self.dp1001 = nn.Dropout(p=args.dropout)
+        self.linear2001 = nn.Linear(512, 256)
+        self.bn7001 = nn.BatchNorm1d(256)
+        self.dp2001 = nn.Dropout(p=args.dropout)
+        # self.linear100 = nn.Linear(256, args.angles)
+
+    def forward(self, x):
+        xyz = x.permute(0, 2, 1)
+        batch_size, _, _ = x.size()
+        # B, D, N
+        x = F.relu(self.bn1(self.conv1(x)))
+        # B, D, N
+        x = F.relu(self.bn2(self.conv2(x)))
+        # x = x.permute(0, 2, 1)
+        # new_xyz, new_feature = sample_and_group(npoint=512, radius=0.15, nsample=32, xyz=xyz, points=x)         
+        # feature_0 = self.gather_local_0(new_feature)
+        # feature = feature_0.permute(0, 2, 1)
+        # new_xyz, new_feature = sample_and_group(npoint=256, radius=0.2, nsample=32, xyz=new_xyz, points=feature) 
+        # feature_1 = self.gather_local_1(new_feature)
+
+        x = get_graph_feature(x, k=32)
+        x = self.seq1(x)
+        x1 = self.pool1(x)
+
+        x = get_graph_feature(x1, k=32)
+        x = self.seq2(x)
+        feature_1 = self.pool1(x)
+
+        x = self.pt_last(feature_1)
+        x = torch.cat([x, feature_1], dim=1)
+        x = self.conv_fuse(x)
+        x = F.adaptive_max_pool1d(x, 1).view(batch_size, -1)
+        x = F.leaky_relu(self.bn6001(self.linear1001(x)), negative_slope=0.2)
+        x = self.dp1001(x)
+        x = F.leaky_relu(self.bn7001(self.linear2001(x)), negative_slope=0.2)
+        x = self.dp2001(x)
+        feature_interest = x
 
         return x, feature_interest, None
 
@@ -840,6 +912,54 @@ class PointNet_Simple_Rotation(nn.Module):
         
         return x, feature_interest, None
 
+
+class PointNet_Simple_Contrast(nn.Module):
+    def __init__(self, args, output_channels=40):
+        super(PointNet_Simple_Contrast, self).__init__()
+        self.args = args
+        #self.stn = STN3d()
+        #self.fstn = STNkd(k=64)
+        self.conv1 = nn.Conv1d(3, 64, kernel_size=1, bias=False)
+        self.conv2 = nn.Conv1d(64, 64, kernel_size=1, bias=False)
+        self.conv3 = nn.Conv1d(64, 64, kernel_size=1, bias=False)
+        self.conv4 = nn.Conv1d(64, 128, kernel_size=1, bias=False)
+        self.conv5 = nn.Conv1d(128, args.emb_dims, kernel_size=1, bias=False)
+        self.bn1 = nn.BatchNorm1d(64,eps=1e-03)
+        self.bn2 = nn.BatchNorm1d(64,eps=1e-03)
+        self.bn3 = nn.BatchNorm1d(64,eps=1e-03)
+        self.bn4 = nn.BatchNorm1d(128,eps=1e-03)
+        self.bn5 = nn.BatchNorm1d(args.emb_dims)
+
+        self.linear1001 = nn.Linear(args.emb_dims, 512, bias=False)
+        self.bn6001 = nn.BatchNorm1d(512,eps=1e-03)
+        self.dp1001 = nn.Dropout(p=0.3)
+        self.linear2001 = nn.Linear(512, 256, bias=False)
+        self.bn7001 = nn.BatchNorm1d(256,eps=1e-03)
+        self.dp2001 = nn.Dropout(p=0.3)
+
+    def forward(self, x):
+        batch_size = x.shape[0]
+        # trans = self.stn(x)
+        # x = x.transpose(2, 1)
+        # x = torch.bmm(x, trans)
+        # x = x.transpose(2, 1)
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = F.relu(self.bn2(self.conv2(x)))
+        # trans_feat = self.fstn(x)
+        # x = x.transpose(2,1)
+        # x = torch.bmm(x, trans_feat)
+        # x = x.transpose(2,1)
+        x = F.relu(self.bn3(self.conv3(x)))
+        x = F.relu(self.bn4(self.conv4(x)))
+        x = F.relu(self.bn5(self.conv5(x)))
+        x = F.adaptive_max_pool1d(x, 1).view(batch_size, -1)
+        x = F.relu(self.bn6001(self.linear1001(x)))
+        x = self.dp1001(x)
+        x = F.relu(self.bn7001(self.linear2001(x)))
+        x = self.dp2001(x)
+        
+        return x, None, None
+
 class PointNet_Simple_Noise(nn.Module):
     def __init__(self, args, output_channels=40):
         super(PointNet_Simple_Noise, self).__init__()
@@ -1286,6 +1406,119 @@ class DGCNN_Rotation(nn.Module):
         
         x = self.linear3(x)
         # else:
+        #     x = F.leaky_relu(self.bn8(self.linear4(x)), negative_slope=0.2)
+        #     x = self.dp3(x)
+        #     x = F.leaky_relu(self.bn9(self.linear5(x)), negative_slope=0.2)
+        #     x = self.dp4(x)
+        #     x = self.linear6(x)
+        return x, feature_interest, None
+
+
+
+
+class DGCNN_Contrast(nn.Module):
+    def __init__(self, args):
+        super(DGCNN_Contrast, self).__init__()
+        self.args = args
+        self.k = args.k
+        # self.FSPool_local=args.fspool_local
+        # self.FSPool_global = args.fspool_global
+        # self.MLPPool_global = args.mlppool_global
+        self.bn1 = nn.BatchNorm2d(64)
+        self.bn2 = nn.BatchNorm2d(64)
+        self.bn3 = nn.BatchNorm2d(128)
+        self.bn4 = nn.BatchNorm2d(256)
+        self.bn5 = nn.BatchNorm1d(args.emb_dims)
+        
+        self.conv1 = nn.Sequential(nn.Conv2d(6, 64, kernel_size=1, bias=False),
+                                   self.bn1,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.conv2 = nn.Sequential(nn.Conv2d(64*2, 64, kernel_size=1, bias=False),
+                                   self.bn2,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.conv3 = nn.Sequential(nn.Conv2d(64*2, 128, kernel_size=1, bias=False),
+                                   self.bn3,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.conv4 = nn.Sequential(nn.Conv2d(128*2, 256, kernel_size=1, bias=False),
+                                   self.bn4,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.conv5 = nn.Sequential(nn.Conv1d(512, args.emb_dims, kernel_size=1, bias=False),
+                                   self.bn5,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.linear1001 = nn.Linear(args.emb_dims*2, 512, bias=False)
+        self.bn6001 = nn.BatchNorm1d(512)
+        self.dp1001 = nn.Dropout(p=args.dropout)
+        self.linear2001 = nn.Linear(512, 256)
+        self.bn7001 = nn.BatchNorm1d(256)
+        self.dp2001 = nn.Dropout(p=args.dropout)
+
+        # if args.rotation:
+        #     self.linear4 = nn.Linear(args.emb_dims*2, 512, bias=False)
+        #     self.bn8 = nn.BatchNorm1d(512)
+        #     self.dp3 = nn.Dropout(p=args.dropout)
+        #     self.linear5 = nn.Linear(512, 256)
+        #     self.bn9 = nn.BatchNorm1d(256)
+        #     self.dp4 = nn.Dropout(p=args.dropout)
+        #     self.linear6 = nn.Linear(256, args.angles)
+        
+        # if(self.FSPool_local):
+        #     self.pool1 = FSPOOL(64,args.k)
+        #     self.pool2 = FSPOOL(64,args.k)
+        #     self.pool3 = FSPOOL(128,args.k)
+        #     self.pool4 = FSPOOL(256,args.k)
+        # else:
+        self.pool1 = MAXPOOL()
+        self.pool2 = MAXPOOL()
+        self.pool3 = MAXPOOL()
+        self.pool4 = MAXPOOL()
+        # if(self.FSPool_global):
+        #     self.pool5 = FSPOOL(1024,1024)
+        #     self.pool6 = FSPOOL(1024,1024)
+        # elif(self.MLPPool_global):
+        # self.pool5 = MLPPool(1024,2,1024)
+    
+    def forward(self, x):
+        batch_size = x.size(0)
+        x = get_graph_feature(x, k=self.k)
+        x = self.conv1(x)
+        x1 = self.pool1(x)
+
+        x = get_graph_feature(x1, k=self.k)
+        x = self.conv2(x)
+        x2 = self.pool2(x)
+
+        x = get_graph_feature(x2, k=self.k)
+        x = self.conv3(x)
+        x3 = self.pool3(x)
+
+        x = get_graph_feature(x3, k=self.k)
+        x = self.conv4(x)
+        x4 = self.pool4(x)
+
+        x = torch.cat((x1, x2, x3, x4), dim=1)
+
+        x = self.conv5(x)
+
+        # if(self.FSPool_global):
+        #     x = x.unsqueeze(2)
+        #     x1 = self.pool5(x).view(batch_size,-1)
+        #     x2 = self.pool6(x).view(batch_size,-1)
+        #     x = torch.cat((x1, x2), 1)
+        # elif(self.MLPPool_global):
+        #     x = self.pool5(x)
+        # else:
+        x1 = F.adaptive_max_pool1d(x, 1).view(batch_size, -1)
+        x2 = F.adaptive_avg_pool1d(x, 1).view(batch_size, -1)
+        x = torch.cat((x1, x2), 1)
+        
+        # if not rotation:
+        x = F.leaky_relu(self.bn6001(self.linear1001(x)), negative_slope=0.2)
+        x = self.dp1001(x)
+        x = F.leaky_relu(self.bn7001(self.linear2001(x)), negative_slope=0.2)
+        x = self.dp2001(x)
+
+        feature_interest = x 
+                # else:
         #     x = F.leaky_relu(self.bn8(self.linear4(x)), negative_slope=0.2)
         #     x = self.dp3(x)
         #     x = F.leaky_relu(self.bn9(self.linear5(x)), negative_slope=0.2)

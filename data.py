@@ -3,7 +3,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-01-18 23:21:07
 LastEditors: Jiachen Sun
-LastEditTime: 2021-04-10 21:22:30
+LastEditTime: 2021-08-07 01:33:27
 '''
 
 import os
@@ -618,7 +618,7 @@ def add_noise(pointcloud, label, level):
 
 
 class PCData_SSL(Dataset):
-    def __init__(self, num_points, name='modelnet40', partition='train', combine=False, rotation=False, angles=6, jigsaw=False, k=2, noise=False, level=2):
+    def __init__(self, num_points, name='modelnet40', partition='train', combine=False, rotation=False, angles=6, jigsaw=False, k=2, noise=False, level=2, contrast=False):
         
         download(name)
         if name == 'modelnet40':
@@ -648,12 +648,13 @@ class PCData_SSL(Dataset):
         self.combine = combine
         self.noise = noise
         self.level = level
+        self.contrast = contrast
 
         # print(np.max(self.data), np.min(self.data))
     def __getitem__(self, item):
         pointcloud = self.data[item][:self.num_points]
         label = self.label[item]
-        if not self.jigsaw and not self.rotation and not self.noise and not self.combine:
+        if not self.jigsaw and not self.rotation and not self.noise and not self.combine and not self.contrast:
             if self.partition == 'train':
                 pointcloud,_ = jitter_pointcloud(pointcloud)
                 # np.random.shuffle(pointcloud)
@@ -702,6 +703,22 @@ class PCData_SSL(Dataset):
             rotated_pointcloud = rotate_data(pointcloud, rotation_label)
 
             return rotated_pointcloud.astype('float32'),rotation_label, jigsaw_pointcloud.astype('float32'),jigsaw_label
+        
+        elif self.contrast:
+            if self.partition == 'train':
+                pointcloud,_ = jitter_pointcloud(pointcloud)
+                # np.random.shuffle(pointcloud)
+            rotation_label = np.random.randint(self.angles)
+            #rotation_label = np.squeeze(rotation_label)
+            rotated_pointcloud = rotate_data(pointcloud, rotation_label)
+
+            rotation_label = np.random.randint(self.angles)
+            #rotation_label = np.squeeze(rotation_label)
+            rotated_pointcloud_2 = rotate_data(pointcloud, rotation_label)
+
+            rotated_pointcloud = np.stack([rotated_pointcloud,rotated_pointcloud_2])
+
+            return rotated_pointcloud.astype('float32'),rotation_label
 
 
     def __len__(self):
