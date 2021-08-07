@@ -5,7 +5,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-02-16 17:42:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-08-07 01:40:15
+LastEditTime: 2021-08-07 11:11:55
 '''
 
 
@@ -54,11 +54,11 @@ def set_bn_eval(m):
       m.eval()
 
 
-def info_nce_loss(self, features):
+def info_nce_loss(features, batch_size, device):
 
-    labels = torch.cat([torch.arange(self.args.batch_size) for i in range(self.args.n_views)], dim=0)
+    labels = torch.cat([torch.arange(batch_size) for i in range(2)], dim=0)
     labels = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
-    labels = labels.to(self.args.device)
+    labels = labels.to(device)
 
     features = F.normalize(features, dim=1)
 
@@ -68,7 +68,7 @@ def info_nce_loss(self, features):
     # assert similarity_matrix.shape == labels.shape
 
     # discard the main diagonal from both: labels and similarities matrix
-    mask = torch.eye(labels.shape[0], dtype=torch.bool).to(self.args.device)
+    mask = torch.eye(labels.shape[0], dtype=torch.bool).to(device)
     labels = labels[~mask].view(labels.shape[0], -1)
     similarity_matrix = similarity_matrix[~mask].view(similarity_matrix.shape[0], -1)
     # assert similarity_matrix.shape == labels.shape
@@ -80,9 +80,9 @@ def info_nce_loss(self, features):
     negatives = similarity_matrix[~labels.bool()].view(similarity_matrix.shape[0], -1)
 
     logits = torch.cat([positives, negatives], dim=1)
-    labels = torch.zeros(logits.shape[0], dtype=torch.long).to(self.args.device)
+    labels = torch.zeros(logits.shape[0], dtype=torch.long).to(device)
 
-    logits = logits / self.args.temperature
+    logits = logits / 0.07
     return logits, labels
 
 def train(args, io):
@@ -226,22 +226,25 @@ def train(args, io):
             elif args.contrast:
 
                 rotated_data, rotation_label = aug_data.to(device).float(), aug_label.to(device).squeeze()
-                print(rotated_data.shape)
+                # print(rotated_data.shape)
                 rotated_data_1 = rotated_data[0]
                 rotated_data_2 = rotated_data[1]
 
+                contrast_data = torch.cat([rotated_data_1, rotated_data_2])
+
                 opt.zero_grad()
 
-                x,_,_ = model(rotated_data_1)
-                c_logits, c_labels = info_nce_loss(x)
-                loss_contrast = criterion(c_logits, x, c_labels)
+                x,_,_ = model(contrast_data)
+                
+                c_logits, c_labels = info_nce_loss(x,batch_size,device)
+                loss_contrast = criterion(c_logits, None, c_labels)
                 loss_contrast.backward()
                 opt.step()
                 # preds = logits.max(dim=1)[1]
                 count += batch_size 
 
                 # preds_rotation = logits_rotation.max(dim=1)[1]
-                train_loss_contrast += loss_rotation.item() * batch_size
+                train_loss_contrast += loss_contrast.item() * batch_size
                 # train_true_rotation.append(rotation_label.cpu().numpy())
                 # train_pred_rotation.append(preds_rotation.detach().cpu().numpy())  
 
