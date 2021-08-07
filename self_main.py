@@ -5,7 +5,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-02-16 17:42:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-08-07 01:36:46
+LastEditTime: 2021-08-07 01:40:15
 '''
 
 
@@ -232,9 +232,9 @@ def train(args, io):
 
                 opt.zero_grad()
 
-                _,_,trans_feat = model(rotated_data_1)
-                c_logits, c_labels = info_nce_loss(trans_feat)
-                loss_contrast = criterion(c_logits, trans_feat, c_labels)
+                x,_,_ = model(rotated_data_1)
+                c_logits, c_labels = info_nce_loss(x)
+                loss_contrast = criterion(c_logits, x, c_labels)
                 loss_contrast.backward()
                 opt.step()
                 # preds = logits.max(dim=1)[1]
