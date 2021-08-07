@@ -5,7 +5,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-02-16 17:42:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-08-07 00:45:12
+LastEditTime: 2021-08-07 00:49:03
 '''
 
 
@@ -488,6 +488,8 @@ if __name__ == "__main__":
                         help='Pretrained model path')
     parser.add_argument('--eps',type=float,default=0.05,
                         help="Maximum allowed L_inf Perturbation for training")
+    parser.add_argument('--contrast',type=bool,default=False,
+                        help="Whether to use contrastive learning")
     parser.add_argument('--alpha',type=float,default=0.01,
                         help="Adversarial training perturbation step size")
     parser.add_argument('--train_iter',type=int,default=7,
