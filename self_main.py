@@ -5,7 +5,7 @@ Description:
 Autor: Jiachen Sun
 Date: 2021-02-16 17:42:47
 LastEditors: Jiachen Sun
-LastEditTime: 2021-08-07 11:11:55
+LastEditTime: 2021-08-23 23:47:01
 '''
 
 
@@ -20,6 +20,7 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import CosineAnnealingLR, ExponentialLR, StepLR, MultiStepLR, ReduceLROnPlateau
 from data import PCData_SSL, PCData, PCData_Jigsaw
 from model_finetune import PointNet_Rotation, DGCNN_Rotation, PointNet_Jigsaw, DGCNN_Jigsaw, DeepSym_Rotation, DeepSym_Jigsaw, Pct_Jigsaw, Pct_Rotation, PointNet_Simple_Rotation, PointNet_Simple_Jigsaw, DGCNN_Noise, PointNet_Simple_Noise,Pct_Contrast,DGCNN_Contrast,PointNet_Simple_Contrast
+from model_contrast import Pct_Contrast2, DGCNN_Contrast2, PointNet_Simple_Contrast2
 import numpy as np
 from torch.utils.data import DataLoader
 import sys
@@ -56,11 +57,11 @@ def set_bn_eval(m):
 
 def info_nce_loss(features, batch_size, device):
 
-    labels = torch.cat([torch.arange(batch_size) for i in range(2)], dim=0)
-    labels = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
-    labels = labels.to(device)
+    # labels = torch.cat([torch.arange(batch_size) for i in range(2)], dim=0)
+    # labels = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
+    # labels = labels.to(device)
 
-    features = F.normalize(features, dim=1)
+    # features = F.normalize(features, dim=1)
 
     similarity_matrix = torch.matmul(features, features.T)
     # assert similarity_matrix.shape == (
@@ -68,19 +69,19 @@ def info_nce_loss(features, batch_size, device):
     # assert similarity_matrix.shape == labels.shape
 
     # discard the main diagonal from both: labels and similarities matrix
-    mask = torch.eye(labels.shape[0], dtype=torch.bool).to(device)
-    labels = labels[~mask].view(labels.shape[0], -1)
-    similarity_matrix = similarity_matrix[~mask].view(similarity_matrix.shape[0], -1)
-    # assert similarity_matrix.shape == labels.shape
+    # mask = torch.eye(labels.shape[0], dtype=torch.bool).to(device)
+    # labels = labels[~mask].view(labels.shape[0], -1)
+    # similarity_matrix = similarity_matrix[~mask].view(similarity_matrix.shape[0], -1)
+    # # assert similarity_matrix.shape == labels.shape
 
-    # select and combine multiple positives
-    positives = similarity_matrix[labels.bool()].view(labels.shape[0], -1)
+    # # select and combine multiple positives
+    # positives = similarity_matrix[labels.bool()].view(labels.shape[0], -1)
 
     # select only the negatives the negatives
-    negatives = similarity_matrix[~labels.bool()].view(similarity_matrix.shape[0], -1)
+    # negatives = similarity_matrix[~labels.bool()].view(similarity_matrix.shape[0], -1)
 
-    logits = torch.cat([positives, negatives], dim=1)
-    labels = torch.zeros(logits.shape[0], dtype=torch.long).to(device)
+    logits = similarity_matrix#positives #torch.cat([positives], dim=1)
+    labels = torch.arange(logits.shape[0]).long().to(device)
 
     logits = logits / 0.07
     return logits, labels
@@ -88,11 +89,11 @@ def info_nce_loss(features, batch_size, device):
 def train(args, io):
 
     train_loader = DataLoader(PCData_SSL(name=args.dataset, partition='train', num_points=args.num_points, rotation=args.rotation, angles=args.angles, jigsaw=args.jigsaw, k=args.k1, 
-                                noise=args.noise, level=args.level, contrast=args.contrast), num_workers=8,
+                                noise=args.noise, level=args.level, contrast=(args.contrast or args.contrast2)), num_workers=8,
                               batch_size=args.batch_size, shuffle=True, drop_last=True)
                               
     test_loader = DataLoader(PCData_SSL(name=args.dataset,partition='test', num_points=args.num_points, rotation=args.rotation, angles=args.angles, jigsaw=args.jigsaw, k=args.k1, 
-                            noise=args.noise, level=args.level, contrast=args.contrast), num_workers=8,
+                            noise=args.noise, level=args.level, contrast=(args.contrast or args.contrast2)), num_workers=8,
                              batch_size=args.test_batch_size, shuffle=False, drop_last=False)
 
     device = torch.device("cuda" if args.cuda else "cpu")
@@ -128,6 +129,12 @@ def train(args, io):
         model = DGCNN_Contrast(args).to(device)
     elif args.model == 'pct_contrast':
         model = Pct_Contrast(args).to(device)
+    elif args.model == 'pointnet_simple_contrast2':
+        model = PointNet_Simple_Contrast2(args).to(device)
+    elif args.model == 'dgcnn_contrast2':
+        model = DGCNN_Contrast2(args).to(device)
+    elif args.model == 'pct_contrast2':
+        model = Pct_Contrast2(args).to(device)
     else:
         raise Exception("Not implemented")
 
@@ -165,6 +172,7 @@ def train(args, io):
 
 
     best_test_acc = 0
+    # mean = []
     for epoch in range(args.epochs):
         ####################
         # Train
@@ -180,14 +188,14 @@ def train(args, io):
             train_loss_jigsaw = 0.0
             train_pred_jigsaw = []
             train_true_jigsaw = []
-        if args.contrast:
+        if args.contrast or args.contrast2:
             train_loss_contrast = 0.0
 
         for aug_data, aug_label in train_loader:
             # print(rotated_data.shape)
             # print(rotation_label.shape)
             # data, label = data.to(device), label.to(device).squeeze()
-            if not args.contrast:
+            if not (args.contrast or args.contrast2):
                 batch_size, N, C = aug_data.size()
 
                 aug_data = aug_data.permute(0, 2, 1)
@@ -199,6 +207,8 @@ def train(args, io):
 
             if args.rotation or args.noise:
                 rotated_data, rotation_label = aug_data.to(device).float(), aug_label.to(device).squeeze()
+
+                # mean.append(rotated_data)
                 if args.adversarial:
                     if not args.feature:
                         rotated_data = attack.pgd_attack(model,rotated_data,rotation_label,eps=args.eps,alpha=args.alpha,iters=args.train_iter,mixup=False) 
@@ -245,11 +255,39 @@ def train(args, io):
 
                 # preds_rotation = logits_rotation.max(dim=1)[1]
                 train_loss_contrast += loss_contrast.item() * batch_size
+            elif args.contrast2:
+
+                rotated_data, rotation_label = aug_data.to(device).float(), aug_label.to(device).squeeze()
+                # print(rotated_data.shape)
+                rotated_data_1 = rotated_data[0]
+                rotated_data_2 = rotated_data[1]
+
+                # contrast_data = torch.cat([rotated_data_1, rotated_data_2])
+
+                opt.zero_grad()
+
+                x1,_,_ = model(rotated_data_1)
+                x2,_,_ = model(rotated_data_2)
+
+                x1 = x1.view(batch_size*1024,-1)
+                x2 = x2.view(batch_size*1024,-1)
+
+                x = torch.cat([x1, x2])
+                c_logits, c_labels = info_nce_loss(x,batch_size*1024,device)
+                loss_contrast = criterion(c_logits, None, c_labels)
+                loss_contrast.backward()
+                opt.step()
+                # preds = logits.max(dim=1)[1]
+                count += batch_size 
+
+                # preds_rotation = logits_rotation.max(dim=1)[1]
+                train_loss_contrast += loss_contrast.item() * batch_size
                 # train_true_rotation.append(rotation_label.cpu().numpy())
                 # train_pred_rotation.append(preds_rotation.detach().cpu().numpy())  
 
             elif args.jigsaw:             
                 jigsaw_data, jigsaw_label = aug_data.to(device).float(), aug_label.to(device).squeeze().long()
+                # mean.append(jigsaw_data)
                 if args.adversarial:
                     if not args.feature:
                         jigsaw_data = attack.pgd_attack_seg(model,jigsaw_data,jigsaw_label,args.k1**3,eps=args.eps,alpha=args.alpha,iters=args.train_iter) 
@@ -285,6 +323,7 @@ def train(args, io):
         if args.jigsaw:
             train_true_jigsaw = np.concatenate(train_true_jigsaw)
             train_pred_jigsaw = np.concatenate(train_pred_jigsaw)
+
         
         if args.rotation:
             outstr = 'Train %d, loss_rotation: %.6f, train_rotation acc: %.6f, train_rotation avg acc: %.6f' % (epoch,
@@ -313,7 +352,7 @@ def train(args, io):
                                                                                          train_true_jigsaw, train_pred_jigsaw)
 
                                                                                      )
-        elif args.contrast:
+        elif (args.contrast or args.contrast2):
             outstr = 'Train %d, loss_contrast: %.6f' % (epoch,
                                                                                      train_loss_contrast*1.0/count
                                                                                      )
@@ -321,7 +360,7 @@ def train(args, io):
         io.cprint(outstr)
         scheduler.step()
         
-        if not args.contrast:
+        if not (args.contrast or args.contrast2):
             test(args,io,model=model, dataloader = test_loader)
         # io.cprint(outstr)
 
@@ -507,6 +546,8 @@ if __name__ == "__main__":
     parser.add_argument('--eps',type=float,default=0.05,
                         help="Maximum allowed L_inf Perturbation for training")
     parser.add_argument('--contrast',type=bool,default=False,
+                        help="Whether to use contrastive learning")
+    parser.add_argument('--contrast2',type=bool,default=False,
                         help="Whether to use contrastive learning")
     parser.add_argument('--alpha',type=float,default=0.01,
                         help="Adversarial training perturbation step size")

@@ -198,7 +198,7 @@ def train(args, io):
         model.train()
         train_pred = []
         train_true = []
-
+        # mean = []
         # test(args,io,model=model, dataloader = test_loader)
 
         for data, label, _, _ in train_loader:
@@ -207,7 +207,7 @@ def train(args, io):
             data, label = data.to(device).float(), label.to(device).long().squeeze()
             batch_size, N, C = data.size()
             data = data.permute(0, 2, 1)
-
+            mean.append(data)
             if args.adversarial:
                 if args.attack == 'pgd':
                     data = attack.pgd_attack(model,data,label,eps=args.eps,alpha=args.alpha,iters=args.train_iter,mixup=False) 
@@ -233,6 +233,9 @@ def train(args, io):
 
         train_true = np.concatenate(train_true)
         train_pred = np.concatenate(train_pred)
+
+        # mean,var = torch.var_mean(torch.cat(mean),dim=(0,2))
+        # print(mean,var)
 
         outstr = 'Train %d, loss: %.6f, train acc: %.6f, train avg acc: %.6f' % (epoch,
                                                                                      train_loss*1.0/count,
